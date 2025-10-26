@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Sidebar } from '@/components/sidebar'
+import { RootLayoutClient } from '@/components/RootLayoutClient'
 import { APP_NAME } from '@/lib/constants'
 
 export const metadata: Metadata = {
@@ -16,14 +17,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans">
-        <div className="flex h-screen bg-background">
-          <Sidebar />
-          <main className="flex-1 overflow-auto">
-            <div className="container mx-auto p-6">
-              {children}
-            </div>
-          </main>
-        </div>
+        <RootLayoutClient>
+          <div className="flex h-screen bg-background">
+            <Sidebar />
+            <main className="flex-1 overflow-auto">
+              <div className="container mx-auto p-6">
+                {children}
+              </div>
+            </main>
+          </div>
+        </RootLayoutClient>
       </body>
     </html>
   )

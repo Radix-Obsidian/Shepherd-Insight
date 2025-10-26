@@ -4,59 +4,103 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { APP_NAME, APP_TAGLINE, NAVIGATION_ITEMS, DEFAULT_SIDEBAR_WIDTH } from '@/lib/constants'
+import { useSidebarCollapsed, useAppStore } from '@/lib/store'
+import { 
+  LayoutDashboard, 
+  Lightbulb, 
+  Lock, 
+  Network, 
+  Download, 
+  User, 
+  ChevronLeft, 
+  ChevronRight 
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
-const navigationItems = [
-  { name: 'Dashboard', href: '/dashboard', tourTarget: 'dashboard' },
-  { name: 'New Insight', href: '/intake', tourTarget: 'new-insight' },
-  { name: 'Vault', href: '/vault', tourTarget: 'vault' },
-  { name: 'Mind Map', href: '/mindmap', tourTarget: 'mindmap' },
-  { name: 'Exports', href: '/exports', tourTarget: 'exports' },
-  { name: 'Account', href: '/account', tourTarget: 'account' },
-]
+const navigationItems = NAVIGATION_ITEMS.map(item => ({
+  ...item,
+  tourTarget: item.name.toLowerCase().replace(' ', '-')
+}))
+
+// Icon mapping for navigation items
+const iconMap = {
+  'Dashboard': LayoutDashboard,
+  'New Insight': Lightbulb,
+  'Vault': Lock,
+  'Mind Map': Network,
+  'Exports': Download,
+  'Account': User,
+}
 
 export function Sidebar() {
   const pathname = usePathname()
+  const isCollapsed = useSidebarCollapsed()
+  const { toggleSidebar } = useAppStore()
 
   return (
-    <div
-      className="flex flex-col bg-card border-r border-border h-screen"
-      style={{ width: DEFAULT_SIDEBAR_WIDTH, minWidth: DEFAULT_SIDEBAR_WIDTH }}
-    >
+    <div className={cn(
+      "bg-gray-100 dark:bg-gray-800 h-screen border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       {/* Header */}
-      <div className="p-6 border-b border-border flex-shrink-0">
-        <h1 className="text-xl font-bold text-foreground">{APP_NAME}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{APP_TAGLINE}</p>
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-xl font-bold">{APP_NAME}</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{APP_TAGLINE}</p>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="p-1 h-8 w-8"
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 overflow-y-auto">
+      <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          {navigationItems.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  'block px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                  pathname === item.href
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                )}
-                data-tour-target={item.tourTarget}
-              >
-                {item.name}
-              </Link>
-            </li>
-          ))}
+          {navigationItems.map((item) => {
+            const IconComponent = iconMap[item.name as keyof typeof iconMap]
+            const isActive = pathname === item.href
+            
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    isActive
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  )}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  <IconComponent className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
+                  {!isCollapsed && item.name}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border flex-shrink-0">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <Link
           href="/account"
-          className="block px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className={cn(
+            "flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          )}
+          title={isCollapsed ? "Sign Out" : undefined}
         >
-          Sign Out
+          <User className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
+          {!isCollapsed && "Sign Out"}
         </Link>
       </div>
     </div>

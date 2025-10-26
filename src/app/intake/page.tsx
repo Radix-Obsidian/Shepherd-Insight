@@ -1,17 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { useAppStore, IntakeFormData } from '@/lib/store'
+import {
+  useAppStore,
+  useIsAuthenticated,
+  useLoading,
+  useError,
+  useAuthReady,
+  IntakeFormData
+} from '@/lib/store'
+import { NEXT_PUBLIC_DISABLE_AUTH } from '@/lib/env'
 
 export default function IntakePage() {
   const router = useRouter()
-  const { createDraftFromIntake } = useAppStore()
-  
+  const { createProject, createVersion } = useAppStore()
+  const isAuthenticated = useIsAuthenticated()
+  const authReady = useAuthReady()
+  const loading = useLoading()
+  const error = useError()
+
   const [formData, setFormData] = useState<IntakeFormData>({
     productName: '',
     audience: '',
@@ -22,15 +34,52 @@ export default function IntakePage() {
     notNow: '',
     constraints: '',
   })
+  const hasRedirected = useRef(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect to account if not authenticated (only on initial load)
+  useEffect(() => {
+    // Skip auth check if disabled (DEV ONLY)
+    if (NEXT_PUBLIC_DISABLE_AUTH) return
+    
+    if (authReady && !isAuthenticated && !hasRedirected.current) {
+      hasRedirected.current = true
+      router.push('/account')
+    }
+  }, [authReady, isAuthenticated, router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    createDraftFromIntake(formData)
-    router.push('/insight')
+
+    try {
+      // Phase 7: Create project from intake with multi-versioning support
+      const { projectId, versionId } = useAppStore.getState().createProjectFromIntake(formData)
+
+      // Navigate to insight with project and version context
+      router.push(`/insight?projectId=${projectId}&versionId=${versionId}`)
+    } catch (error) {
+      console.error('Failed to create project:', error)
+      // Error is handled by the store
+    }
   }
 
   const handleInputChange = (field: keyof IntakeFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Show loading while checking authentication
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return null // Will redirect via useEffect
   }
 
   return (
@@ -190,9 +239,23 @@ export default function IntakePage() {
           </CardContent>
         </Card>
 
+        {/* Error Display */}
+        {error && (
+          <div className="rounded-lg border-red-200 bg-red-50 dark:bg-red-900/20 p-4">
+            <p className="text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        )}
+
         <div className="flex justify-end">
-          <Button type="submit" size="lg">
-            Generate Insight
+          <Button type="submit" size="lg" disabled={loading} data-testid="submit-project">
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating Project...
+              </>
+            ) : (
+              'Generate Insight'
+            )}
           </Button>
         </div>
       </form>
