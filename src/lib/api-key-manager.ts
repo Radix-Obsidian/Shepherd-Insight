@@ -31,7 +31,8 @@ export async function getApiKey(keyName: string): Promise<string> {
     
     return apiKey
   } catch (error) {
-    console.error(`Failed to fetch ${keyName} from Edge Function:`, error)
+    logger.error(`Failed to fetch ${keyName} from Edge Function:`, error)
     throw new Error(`${keyName} environment variable is required`)
   }
 }
+import { logger } from '@/lib/logger';

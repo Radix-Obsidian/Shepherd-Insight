@@ -27,7 +27,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps) {
           <div className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Need help?</h2>
-              <p className="text-sm text-gray-600">Here's how this actually works.</p>
+              <p className="text-sm text-gray-600">Here&apos;s how this actually works.</p>
             </div>
 
             <div className="space-y-4">
@@ -63,7 +63,7 @@ export function HelpDrawer({ isOpen, onClose }: HelpDrawerProps) {
                   <div className="space-y-2">
                     <h3 className="font-medium text-gray-900">Decision Vault</h3>
                     <p className="text-sm text-gray-600">
-                      This locks "do this now" and "not doing this yet" so nobody drags you off-scope.
+                      This locks &quot;do this now&quot; and &quot;not doing this yet&quot; so nobody drags you off-scope.
                     </p>
                   </div>
                 </CardContent>

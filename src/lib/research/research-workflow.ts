@@ -2,6 +2,7 @@ import { FirecrawlClient } from './firecrawl-client'
 import { GroqClient } from './groq-client'
 import { InsightData, PainPoint, Competitor, Opportunity, Persona } from '@/types/insight'
 import { z } from 'zod'
+import { logger } from '@/lib/logger';
 
 interface ResearchOptions {
   query: string
@@ -96,9 +97,9 @@ export class ResearchWorkflow {
     this.onProgressUpdate?.(this.state)
     
     if (error) {
-      console.error(`Research Error at step "${step}":`, error)
+      logger.error(`Research Error at step "${step}":`, error)
     } else {
-      console.log(`Research Progress: ${step} (${progress}%)`)
+      logger.debug(`Research Progress: ${step} (${progress}%)`)
     }
   }
 
@@ -137,7 +138,7 @@ export class ResearchWorkflow {
             this.state.findings.push(...competitorData.data)
           }
         } catch (error) {
-          console.warn('Some competitor URLs failed to scrape:', error)
+          logger.warn('Some competitor URLs failed to scrape:', error)
           // Continue with partial data
         }
       }
@@ -173,7 +174,7 @@ export class ResearchWorkflow {
             }
           }
         } catch (error) {
-          console.warn('Structured extraction failed:', error)
+          logger.warn('Structured extraction failed:', error)
           // Continue with unstructured data
         }
       }
@@ -264,7 +265,7 @@ export class ResearchWorkflow {
       
       return mindMapData
     } catch (error: any) {
-      console.error('Mind map generation failed:', error)
+      logger.error('Mind map generation failed:', error)
       throw error
     }
   }

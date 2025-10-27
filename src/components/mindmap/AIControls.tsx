@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,7 +43,7 @@ export function AIControls({ isOpen, onClose }: AIControlsProps) {
       importGraph(data)
       onClose()
     } catch (error) {
-      console.error('Error generating mind map:', error)
+      logger.error('Error generating mind map:', error)
     } finally {
       setIsGenerating(false)
     }

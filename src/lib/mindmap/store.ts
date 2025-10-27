@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { MindMapNode, MindMapEdge, MindMapStore, NODE_COLORS, NODE_TEXT_COLORS } from './types'
+import { MindMapNode, MindMapEdge, MindMapStore, NODE_COLORS } from './types'
+import { logger } from '@/lib/logger';
 
 export const useMindMapStore = create<MindMapStore>()(
   devtools(
@@ -158,7 +159,7 @@ export const useMindMapStore = create<MindMapStore>()(
             set({ projectId })
           }
         } catch (error) {
-          console.error('Failed to load mind map from localStorage:', error)
+          logger.error('Failed to load mind map from localStorage:', error)
           set({ projectId })
         }
       },
@@ -167,7 +168,7 @@ export const useMindMapStore = create<MindMapStore>()(
         try {
           localStorage.setItem(`mindmap-${projectId}`, JSON.stringify(state))
         } catch (error) {
-          console.error('Failed to save mind map to localStorage:', error)
+          logger.error('Failed to save mind map to localStorage:', error)
         }
       },
 

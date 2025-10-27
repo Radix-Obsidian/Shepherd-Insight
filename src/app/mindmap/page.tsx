@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ReactFlowProvider } from 'reactflow'
@@ -33,7 +34,7 @@ function MindMapPageContent() {
 
   const handleExport = (type: 'image' | 'pdf' | 'presentation') => {
     // TODO: Implement export functionality
-    console.log(`Export as ${type}`)
+    logger.debug(`Export as ${type}`)
   }
 
   return (

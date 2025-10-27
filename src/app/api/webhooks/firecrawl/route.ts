@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
     const webhookSecret = process.env.FIRECRAWL_WEBHOOK_SECRET
 
     if (!signature || !webhookSecret) {
-      console.error('Missing webhook signature or secret')
+      logger.error('Missing webhook signature or secret')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Extract hash from signature header
     const [algorithm, hash] = signature.split('=')
     if (algorithm !== 'sha256') {
-      console.error('Invalid signature algorithm:', algorithm)
+      logger.error('Invalid signature algorithm:', algorithm)
       return NextResponse.json({ error: 'Invalid signature algorithm' }, { status: 401 })
     }
 
@@ -31,13 +32,13 @@ export async function POST(request: NextRequest) {
 
     // Verify signature using timing-safe comparison
     if (!crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
-      console.error('Invalid webhook signature')
+      logger.error('Invalid webhook signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
     // Parse verified webhook payload
     const event = JSON.parse(body)
-    console.log('Verified Firecrawl webhook:', event)
+    logger.debug('Verified Firecrawl webhook:', event)
 
     // Handle different event types
     switch (event.type) {
@@ -82,14 +83,14 @@ export async function POST(request: NextRequest) {
         break
       
       default:
-        console.log('Unhandled webhook event type:', event.type)
+        logger.debug('Unhandled webhook event type:', event.type)
     }
 
     // Always respond with 200 to acknowledge receipt
     return NextResponse.json({ received: true })
 
   } catch (error: any) {
-    console.error('Webhook processing error:', error)
+    logger.error('Webhook processing error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleCrawlStarted(event: any) {
-  console.log('Crawl started:', event.data.jobId)
+  logger.debug('Crawl started:', event.data.jobId)
   
   // Update job status in Supabase
   try {
@@ -112,12 +113,12 @@ async function handleCrawlStarted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update crawl started status:', error)
+    logger.error('Failed to update crawl started status:', error)
   }
 }
 
 async function handleCrawlPage(event: any) {
-  console.log('Crawl page completed:', event.data.url)
+  logger.debug('Crawl page completed:', event.data.url)
   
   // Update progress for each page crawled
   try {
@@ -129,12 +130,12 @@ async function handleCrawlPage(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update crawl page status:', error)
+    logger.error('Failed to update crawl page status:', error)
   }
 }
 
 async function handleCrawlCompleted(event: any) {
-  console.log('Crawl completed:', event.data.jobId)
+  logger.debug('Crawl completed:', event.data.jobId)
   
   try {
     // Get job details
@@ -145,7 +146,7 @@ async function handleCrawlCompleted(event: any) {
       .single()
 
     if (jobError || !job) {
-      console.error('Failed to fetch job:', jobError)
+      logger.error('Failed to fetch job:', jobError)
       return
     }
 
@@ -167,12 +168,12 @@ async function handleCrawlCompleted(event: any) {
     await sendCompletionNotification(job, 'crawl')
     
   } catch (error) {
-    console.error('Failed to handle crawl completion:', error)
+    logger.error('Failed to handle crawl completion:', error)
   }
 }
 
 async function handleCrawlFailed(event: any) {
-  console.log('Crawl failed:', event.data.jobId, event.data.error)
+  logger.debug('Crawl failed:', event.data.jobId, event.data.error)
   
   try {
     await supabase
@@ -185,12 +186,12 @@ async function handleCrawlFailed(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update crawl failed status:', error)
+    logger.error('Failed to update crawl failed status:', error)
   }
 }
 
 async function handleBatchStarted(event: any) {
-  console.log('Batch scrape started:', event.data.jobId)
+  logger.debug('Batch scrape started:', event.data.jobId)
   
   try {
     await supabase
@@ -203,12 +204,12 @@ async function handleBatchStarted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update batch started status:', error)
+    logger.error('Failed to update batch started status:', error)
   }
 }
 
 async function handleBatchPage(event: any) {
-  console.log('Batch page completed:', event.data.url)
+  logger.debug('Batch page completed:', event.data.url)
   
   try {
     await supabase
@@ -219,12 +220,12 @@ async function handleBatchPage(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update batch page status:', error)
+    logger.error('Failed to update batch page status:', error)
   }
 }
 
 async function handleBatchCompleted(event: any) {
-  console.log('Batch scrape completed:', event.data.jobId)
+  logger.debug('Batch scrape completed:', event.data.jobId)
   
   try {
     await supabase
@@ -237,12 +238,12 @@ async function handleBatchCompleted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update batch completed status:', error)
+    logger.error('Failed to update batch completed status:', error)
   }
 }
 
 async function handleExtractStarted(event: any) {
-  console.log('Extract started:', event.data.jobId)
+  logger.debug('Extract started:', event.data.jobId)
   
   try {
     await supabase
@@ -255,12 +256,12 @@ async function handleExtractStarted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update extract started status:', error)
+    logger.error('Failed to update extract started status:', error)
   }
 }
 
 async function handleExtractCompleted(event: any) {
-  console.log('Extract completed:', event.data.jobId)
+  logger.debug('Extract completed:', event.data.jobId)
   
   try {
     await supabase
@@ -273,12 +274,12 @@ async function handleExtractCompleted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update extract completed status:', error)
+    logger.error('Failed to update extract completed status:', error)
   }
 }
 
 async function handleExtractFailed(event: any) {
-  console.log('Extract failed:', event.data.jobId, event.data.error)
+  logger.debug('Extract failed:', event.data.jobId, event.data.error)
   
   try {
     await supabase
@@ -291,7 +292,7 @@ async function handleExtractFailed(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    console.error('Failed to update extract failed status:', error)
+    logger.error('Failed to update extract failed status:', error)
   }
 }
 
@@ -300,7 +301,7 @@ async function handleExtractFailed(event: any) {
  */
 async function triggerInsightGeneration(job: any, crawlData: any) {
   try {
-    console.log('Triggering insight generation for job:', job.id)
+    logger.debug('Triggering insight generation for job:', job.id)
 
     // Call the research API to generate insights
     const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/research/run`, {
@@ -323,10 +324,10 @@ async function triggerInsightGeneration(job: any, crawlData: any) {
     }
 
     const result = await response.json()
-    console.log('Insight generation triggered successfully:', result)
+    logger.debug('Insight generation triggered successfully:', result)
 
   } catch (error) {
-    console.error('Failed to trigger insight generation:', error)
+    logger.error('Failed to trigger insight generation:', error)
     
     // Update job with error
     await supabase
@@ -354,7 +355,7 @@ async function sendCompletionNotification(job: any, type: 'crawl' | 'extract' | 
       .single()
 
     if (userError || !user) {
-      console.error('Failed to fetch user:', userError)
+      logger.error('Failed to fetch user:', userError)
       return
     }
 
@@ -379,12 +380,12 @@ async function sendCompletionNotification(job: any, type: 'crawl' | 'extract' | 
     })
 
     if (!notificationResponse.ok) {
-      console.error('Failed to send notification:', await notificationResponse.text())
+      logger.error('Failed to send notification:', await notificationResponse.text())
     } else {
-      console.log('Notification sent successfully')
+      logger.debug('Notification sent successfully')
     }
 
   } catch (error) {
-    console.error('Failed to send completion notification:', error)
+    logger.error('Failed to send completion notification:', error)
   }
 }

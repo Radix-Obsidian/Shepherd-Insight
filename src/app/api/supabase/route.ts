@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error: any) {
-    console.error('Supabase GET error:', error)
+    logger.error('Supabase GET error:', error)
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error: any) {
-    console.error('Supabase POST error:', error)
+    logger.error('Supabase POST error:', error)
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -218,7 +219,7 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error: any) {
-    console.error('Supabase DELETE error:', error)
+    logger.error('Supabase DELETE error:', error)
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

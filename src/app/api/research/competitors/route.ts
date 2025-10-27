@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { CompetitorAnalyzer } from '@/lib/research/competitor-analyzer'
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { urls, includeSocialAnalysis, includeContentAnalysis, maxDepth } = body
+    const payload = await request.json()
+    if (typeof payload !== 'object' || payload === null) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+    const { urls, includeSocialAnalysis, includeContentAnalysis, maxDepth } = payload as Record<string, unknown>
 
-    if (!urls || !Array.isArray(urls) || urls.length === 0) {
+    if (!Array.isArray(urls) || urls.length === 0) {
       return NextResponse.json(
         { error: 'URLs array is required' },
         { status: 400 }
@@ -30,15 +34,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`🔍 Starting competitor analysis for ${validUrls.length} competitors`)
+    logger.debug(`🔍 Starting competitor analysis for ${validUrls.length} competitors`)
 
     const analyzer = new CompetitorAnalyzer()
-    
+
     const result = await analyzer.analyzeCompetitors({
       urls: validUrls,
-      includeSocialAnalysis: includeSocialAnalysis || false,
-      includeContentAnalysis: includeContentAnalysis || false,
-      maxDepth: maxDepth || 2
+      includeSocialAnalysis: Boolean(includeSocialAnalysis),
+      includeContentAnalysis: Boolean(includeContentAnalysis),
+      maxDepth: typeof maxDepth === 'number' ? maxDepth : 2,
     })
 
     return NextResponse.json({
@@ -48,13 +52,14 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
 
-  } catch (error: any) {
-    console.error('Competitor analysis error:', error)
-    
+  } catch (error: unknown) {
+    logger.error('Competitor analysis error:', error)
+    const message = error instanceof Error ? error.message : 'Competitor analysis failed'
+
     return NextResponse.json(
-      { 
+      {
         error: 'Competitor analysis failed',
-        details: error.message 
+        details: message,
       },
       { status: 500 }
     )

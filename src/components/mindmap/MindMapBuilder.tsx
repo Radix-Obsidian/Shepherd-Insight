@@ -89,26 +89,28 @@ export function MindMapBuilder() {
   }, [setSelectedNode])
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onNodeClick={onNodeClick}
-      onPaneClick={onPaneClick}
-      nodeTypes={nodeTypes}
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-    >
-      <Background variant={BackgroundVariant.Dots} gap={20} />
-      <Controls />
-      <MiniMap 
-        nodeColor={(node) => node.data?.color || '#3b82f6'}
-        nodeStrokeWidth={3}
-        zoomable
-        pannable
-      />
-    </ReactFlow>
+    <div id="mindmap-canvas" className="relative bg-white rounded-xl border shadow-sm h-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} />
+        <Controls />
+        <MiniMap
+          nodeColor={(node) => node.data?.color || '#3b82f6'}
+          nodeStrokeWidth={3}
+          zoomable
+          pannable
+        />
+      </ReactFlow>
+    </div>
   )
 }

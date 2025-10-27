@@ -6,6 +6,7 @@
 import { FirecrawlClient } from './firecrawl-client'
 import { GroqClient } from './groq-client'
 import { z } from 'zod'
+import { logger } from '@/lib/logger';
 
 // Zod schema for competitor analysis
 const CompetitorAnalysisSchema = z.object({
@@ -79,7 +80,7 @@ export class CompetitorAnalyzer {
   async analyzeCompetitors(options: CompetitorAnalysisOptions): Promise<CompetitorAnalysisResult> {
     const { urls, includeSocialAnalysis = false, includeContentAnalysis = false, maxDepth = 2 } = options
 
-    console.log(`🔍 Starting competitor analysis for ${urls.length} competitors...`)
+    logger.debug(`🔍 Starting competitor analysis for ${urls.length} competitors...`)
 
     // Step 1: Scrape competitor websites
     const competitorData = await this.scrapeCompetitorWebsites(urls, maxDepth)
@@ -93,7 +94,7 @@ export class CompetitorAnalyzer {
     // Step 4: Generate insights and recommendations
     const insights = await this.generateInsights(analysis)
 
-    console.log('✅ Competitor analysis completed')
+    logger.debug('✅ Competitor analysis completed')
 
     return {
       competitors: analysis,
@@ -106,7 +107,7 @@ export class CompetitorAnalyzer {
    * Scrape competitor websites
    */
   private async scrapeCompetitorWebsites(urls: string[], maxDepth: number) {
-    console.log('📄 Scraping competitor websites...')
+    logger.debug('📄 Scraping competitor websites...')
     
     const results = []
     
@@ -129,7 +130,7 @@ export class CompetitorAnalyzer {
             })
           }
         } catch (error) {
-          console.warn(`Could not scrape pricing page for ${url}:`, error)
+          logger.warn(`Could not scrape pricing page for ${url}:`, error)
         }
 
         // Scrape about/features page
@@ -143,7 +144,7 @@ export class CompetitorAnalyzer {
             })
           }
         } catch (error) {
-          console.warn(`Could not scrape features page for ${url}:`, error)
+          logger.warn(`Could not scrape features page for ${url}:`, error)
         }
 
         results.push({
@@ -154,9 +155,9 @@ export class CompetitorAnalyzer {
           scrapedAt: new Date().toISOString()
         })
 
-        console.log(`✅ Scraped ${url}`)
+        logger.debug(`✅ Scraped ${url}`)
       } catch (error) {
-        console.error(`❌ Failed to scrape ${url}:`, error)
+        logger.error(`❌ Failed to scrape ${url}:`, error)
         results.push({
           url,
           error: error instanceof Error ? error.message : String(error),
@@ -172,7 +173,7 @@ export class CompetitorAnalyzer {
    * Extract structured data using AI
    */
   private async extractStructuredData(scrapedData: any[], includeContentAnalysis: boolean) {
-    console.log('🤖 Extracting structured data with AI...')
+    logger.debug('🤖 Extracting structured data with AI...')
 
     const structuredResults = []
 
@@ -199,9 +200,9 @@ export class CompetitorAnalyzer {
           extractedAt: new Date().toISOString()
         })
 
-        console.log(`✅ Extracted data for ${data.url}`)
+        logger.debug(`✅ Extracted data for ${data.url}`)
       } catch (error) {
-        console.error(`❌ Failed to extract data for ${data.url}:`, error)
+        logger.error(`❌ Failed to extract data for ${data.url}:`, error)
         structuredResults.push({
           url: data.url,
           error: error instanceof Error ? error.message : String(error)
@@ -266,7 +267,7 @@ Provide a comprehensive analysis that can be used for competitive intelligence.`
    * Perform AI analysis on structured data
    */
   private async performAIAnalysis(structuredData: any[], includeSocialAnalysis: boolean) {
-    console.log('🧠 Performing AI analysis...')
+    logger.debug('🧠 Performing AI analysis...')
 
     const validData = structuredData.filter(d => !d.error)
     
@@ -312,7 +313,7 @@ Return the analysis in the same structured format.`
    * Generate market insights and recommendations
    */
   private async generateInsights(analysis: any[]) {
-    console.log('💡 Generating insights and recommendations...')
+    logger.debug('💡 Generating insights and recommendations...')
 
     const prompt = `Based on this competitor analysis, provide strategic insights:
 

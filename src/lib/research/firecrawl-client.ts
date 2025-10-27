@@ -1,6 +1,7 @@
 import FirecrawlApp from '@mendable/firecrawl-js'
 import { z } from 'zod'
 import { getApiKey } from '@/lib/api-key-manager'
+import { logger } from '@/lib/logger';
 
 export interface SearchOptions {
   limit?: number
@@ -27,16 +28,17 @@ export interface CrawlOptions {
 }
 
 export class FirecrawlClient {
-  private app: FirecrawlApp
+  private app: FirecrawlApp | null = null
 
   constructor() {
-    // API key will be fetched when needed
-    this.app = new FirecrawlApp({ apiKey: '' })
+    // App will be initialized when needed
   }
 
   private async initializeApp() {
-    const apiKey = await getApiKey('FIRECRAWL_API_KEY')
-    this.app = new FirecrawlApp({ apiKey })
+    if (!this.app) {
+      const apiKey = await getApiKey('FIRECRAWL_API_KEY')
+      this.app = new FirecrawlApp({ apiKey })
+    }
   }
 
   /**
@@ -47,14 +49,14 @@ export class FirecrawlClient {
     try {
       await this.initializeApp()
       const { limit = 5 } = options
-      
-      const result = await this.app.search(query, {
+
+      const result = await this.app!.search(query, {
         limit,
       })
-      
+
       return result
     } catch (error) {
-      console.error('Firecrawl search error:', error)
+      logger.error('Firecrawl search error:', error)
       throw new Error(`Search failed: ${error}`)
     }
   }
@@ -72,7 +74,7 @@ export class FirecrawlClient {
         onlyMainContent = true 
       } = options
 
-      const result = await this.app.scrape(url, {
+      const result = await this.app!.scrape(url, {
         formats: formats as any,
         includeRawHtml,
         onlyMainContent,
@@ -80,7 +82,7 @@ export class FirecrawlClient {
       
       return result
     } catch (error) {
-      console.error('Firecrawl scrape error:', error)
+      logger.error('Firecrawl scrape error:', error)
       throw new Error(`Scrape failed: ${error}`)
     }
   }
@@ -105,13 +107,13 @@ export class FirecrawlClient {
           const result = await this.scrapeUrl(url, { formats, includeRawHtml, onlyMainContent })
           results.push(result)
         } catch (error) {
-          console.warn(`Failed to scrape ${url}:`, error)
+          logger.warn(`Failed to scrape ${url}:`, error)
         }
       }
       
       return { data: results }
     } catch (error) {
-      console.error('Firecrawl batch scrape error:', error)
+      logger.error('Firecrawl batch scrape error:', error)
       throw new Error(`Batch scrape failed: ${error}`)
     }
   }
@@ -125,14 +127,14 @@ export class FirecrawlClient {
       await this.initializeApp()
       const { formats = ['markdown'] } = options
 
-      const result = await this.app.extract({
+      const result = await this.app!.extract({
         urls,
         schema,
       })
       
       return result
     } catch (error) {
-      console.error('Firecrawl extract error:', error)
+      logger.error('Firecrawl extract error:', error)
       throw new Error(`Extract failed: ${error}`)
     }
   }
@@ -164,11 +166,11 @@ export class FirecrawlClient {
         crawlConfig.webhook = webhook
       }
 
-      const result = await this.app.crawl(url, crawlConfig)
-      
+      const result = await this.app!.crawl(url, crawlConfig)
+
       return result
     } catch (error) {
-      console.error('Firecrawl crawl error:', error)
+      logger.error('Firecrawl crawl error:', error)
       throw new Error(`Crawl failed: ${error}`)
     }
   }
@@ -180,10 +182,10 @@ export class FirecrawlClient {
   async getCrawlStatus(crawlId: string) {
     try {
       await this.initializeApp()
-      const result = await this.app.getCrawlStatus(crawlId)
+      const result = await this.app!.getCrawlStatus(crawlId)
       return result
     } catch (error) {
-      console.error('Firecrawl get crawl status error:', error)
+      logger.error('Firecrawl get crawl status error:', error)
       throw new Error(`Get crawl status failed: ${error}`)
     }
   }
@@ -197,13 +199,13 @@ export class FirecrawlClient {
       await this.initializeApp()
       const { limit = 100 } = options
 
-      const result = await this.app.map(url, {
+      const result = await this.app!.map(url, {
         limit,
       })
-      
+
       return result
     } catch (error) {
-      console.error('Firecrawl map error:', error)
+      logger.error('Firecrawl map error:', error)
       throw new Error(`Map generation failed: ${error}`)
     }
   }

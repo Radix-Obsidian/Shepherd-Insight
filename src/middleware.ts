@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   if (NEXT_PUBLIC_DISABLE_AUTH) {
     return NextResponse.next()
   }
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -19,21 +19,15 @@ export async function middleware(request: NextRequest) {
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return Array.from(request.cookies.getAll()).map(cookie => ({
+            name: cookie.name,
+            value: cookie.value,
+          }))
         },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
           })
         },
       },

@@ -1,218 +1,72 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { PageHeader } from '@/components/onboarding/PageHeader'
-import { ProductTour } from '@/components/onboarding/ProductTour'
-import { HelpDrawer } from '@/components/onboarding/HelpDrawer'
-import { ResearchPanel } from '@/components/research/ResearchPanel'
-import {
-  useProjects,
-  useIsAuthenticated,
-  useSyncInProgress,
-  useError,
-  useUser,
-  useAppStore,
-  useAuthReady
-} from '@/lib/store'
-import { NEXT_PUBLIC_DISABLE_AUTH } from '@/lib/env'
+import Link from 'next/link';
+import { useAppStore } from '@/lib/store';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const projects = useProjects()
-  const isAuthenticated = useIsAuthenticated()
-  const authReady = useAuthReady()
-  const syncInProgress = useSyncInProgress()
-  const error = useError()
-  const user = useUser()
-  const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false)
-  const [isResearchPanelOpen, setIsResearchPanelOpen] = useState(false)
-
-  // Redirect to account if not authenticated (only on initial load)
-  useEffect(() => {
-    // Skip auth check if disabled (DEV ONLY)
-    if (NEXT_PUBLIC_DISABLE_AUTH) return
-    
-    if (authReady && !isAuthenticated) {
-      router.push('/account')
-    }
-  }, [authReady, isAuthenticated, router])
-
-  // Sync projects on mount if authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      useAppStore.getState().syncProjects()
-    }
-  }, [isAuthenticated])
-
-  const hasProjects = projects.length > 0
-
-  // Show loading state while checking authentication
-  if (!isAuthenticated) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Checking authentication...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const projects = useAppStore(s => s.listProjects());
 
   return (
-    <div className="relative">
-      <ProductTour />
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Your Projects</h1>
+          <p className="text-sm text-gray-600">Each project is an idea you’re shaping.</p>
+        </div>
+        <Link href="/intake">
+          <Button>+ Start a New Idea</Button>
+        </Link>
+      </div>
 
-      <HelpDrawer
-        isOpen={isHelpDrawerOpen}
-        onClose={() => setIsHelpDrawerOpen(false)}
-      />
-
-      <div className="space-y-6">
-        <PageHeader
-          title="Your Projects"
-          description={`Welcome back${user?.email ? `, ${user.email}` : ''}! Each project is something you're shaping. Click one to keep refining it.`}
-          actions={
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => setIsHelpDrawerOpen(true)}
-                aria-label="Help"
-              >
-                ?
-              </Button>
-              <Link href="/intake">
-                <Button size="lg">
-                  + Start a New Idea
-                </Button>
-              </Link>
-            </>
-          }
-        />
-
-        {/* Error Display */}
-        {error && (
-          <div className="rounded-lg border-red-200 bg-red-50 dark:bg-red-900/20 p-4">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {syncInProgress && (
-          <div className="rounded-lg bg-muted/50 p-4">
-            <p className="text-sm text-muted-foreground">
-              <span className="animate-spin inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2"></span>
-              Syncing your projects...
-            </p>
-          </div>
-        )}
-
-        {/* AI Research Assistant */}
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+      {projects.length === 0 ? (
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">🧠</span>
-              AI Research Assistant
-            </CardTitle>
+            <CardTitle>Let’s start your first idea.</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Let AI research your market, analyze competitors, and generate insights automatically.
+            <p className="text-sm text-gray-600 mb-3">
+              We’ll guide you from idea to a clear plan you can share.
             </p>
-            <Button onClick={() => setIsResearchPanelOpen(true)}>
-              Start New Research
-            </Button>
+            <Link href="/intake">
+              <Button>Start now</Button>
+            </Link>
           </CardContent>
         </Card>
-
-        {/* Content: Projects Grid or Empty State */}
-        {hasProjects ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => {
-              // Get the latest version for display
-              const latestVersion = project.versions?.[project.versions.length - 1]
-              const hasLockedDecisions = latestVersion?.locked_decisions?.mustHavesLocked?.length > 0
-
-              return (
-                <Card key={project.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
-                      {hasLockedDecisions ? (
-                        <Badge variant="default">Decisions Locked</Badge>
-                      ) : latestVersion ? (
-                        <Badge variant="warning">In Progress</Badge>
-                      ) : (
-                        <Badge variant="warning">No versions yet</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {latestVersion?.problem || 'Project description coming soon...'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {latestVersion ?
-                        `v${latestVersion.version_number} — ${new Date(latestVersion.created_at).toLocaleDateString()}` :
-                        `Created ${new Date(project.created_at).toLocaleDateString()}`
-                      }
-                    </p>
-                    <div className="flex gap-2">
-                      <Link href={`/insight?projectId=${project.id}${latestVersion ? `&versionId=${latestVersion.id}` : ''}`} className="flex-1">
-                        <Button variant="primary" size="sm" className="w-full">
-                          Open Insight
-                        </Button>
-                      </Link>
-                      <Link href={`/vault?projectId=${project.id}${latestVersion ? `&versionId=${latestVersion.id}` : ''}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
-                          View Vault
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          <Card className="text-center py-12">
-            <CardContent>
-              <h3 className="text-lg font-semibold mb-2">Let's start your first idea.</h3>
-              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                You'll answer a few questions, and we'll turn it into a founder brief you can send to a contractor today.
-              </p>
-              <Link href="/intake">
-                <Button>Start now</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Research Panel */}
-        <ResearchPanel 
-          isOpen={isResearchPanelOpen}
-          onClose={() => setIsResearchPanelOpen(false)}
-          onComplete={(data) => {
-            console.log('Research completed:', data)
-            // TODO: Navigate to mind map with generated data
-          }}
-        />
-
-        {/* Help Drawer */}
-        <HelpDrawer 
-          isOpen={isHelpDrawerOpen}
-          onClose={() => setIsHelpDrawerOpen(false)}
-        />
-
-        {/* Product Tour */}
-        <ProductTour />
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {projects.map(project => {
+            const latest = [...project.versions].sort((a, b) =>
+              a.timestampISO.localeCompare(b.timestampISO)
+            ).at(-1)!;
+            const qs = `?projectId=${project.id}&versionId=${latest.id}`;
+            return (
+              <Card key={project.id}>
+                <CardHeader>
+                  <CardTitle>{project.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Updated {new Date(latest.timestampISO).toLocaleString()}
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link href={`/insight${qs}`}>
+                      <Button>Open Insight</Button>
+                    </Link>
+                    <Link href={`/vault${qs}`}>
+                      <Button variant="secondary">View Vault</Button>
+                    </Link>
+                    <Link href={`/exports${qs}`}>
+                      <Button variant="ghost">Export</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
-  )
+  );
 }

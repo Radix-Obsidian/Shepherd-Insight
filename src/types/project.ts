@@ -2,36 +2,32 @@ export interface VersionData {
   name: string;
   audience: string;
   problem: string;
-  why_current_fails: string;
+  whyCurrentFails: string;
   promise: string;
-  must_haves: string[];
-  not_now: string[];
+  mustHaves: string[];
+  notNow: string[];
   constraints: string;
+  positioning?: string;
+  timestampISO?: string;
+}
+
+export interface LockedDecisions {
+  mustHavesLocked: string[];
+  notNowLocked: string[];
 }
 
 export interface VersionRecord {
   id: string;
-  version_number: number;
-  name: string;
-  audience: string;
-  problem: string;
-  why_current_fails: string;
-  promise: string;
-  must_haves: string[];
-  not_now: string[];
-  constraints: string;
-  locked_decisions: {
-    mustHavesLocked: string[];
-    notNowLocked: string[];
-  };
-  created_at: string;
-  updated_at: string;
+  label: string;
+  timestampISO: string;
+  data: VersionData;
+  locked: LockedDecisions;
+  mindmapJson?: { nodes: unknown[]; edges: unknown[] };
 }
 
 export interface ProjectRecord {
   id: string;
   name: string;
-  created_at: string;
-  updated_at: string;
+  createdAtISO: string;
   versions: VersionRecord[];
 }

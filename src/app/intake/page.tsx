@@ -1,93 +1,73 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  useAppStore,
-  useIsAuthenticated,
-  useLoading,
-  useError,
-  useAuthReady,
-  IntakeFormData
-} from '@/lib/store'
-import { NEXT_PUBLIC_DISABLE_AUTH } from '@/lib/env'
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useAppStore } from '@/lib/store';
+
+interface IntakeFormState {
+  name: string;
+  audience: string;
+  problem: string;
+  whyCurrentFails: string;
+  promise: string;
+  mustHaves: string;
+  notNow: string;
+  constraints: string;
+}
+
+const initialState: IntakeFormState = {
+  name: '',
+  audience: '',
+  problem: '',
+  whyCurrentFails: '',
+  promise: '',
+  mustHaves: '',
+  notNow: '',
+  constraints: '',
+};
 
 export default function IntakePage() {
-  const router = useRouter()
-  const { createProject, createVersion } = useAppStore()
-  const isAuthenticated = useIsAuthenticated()
-  const authReady = useAuthReady()
-  const loading = useLoading()
-  const error = useError()
+  const router = useRouter();
+  const createProjectFromIntake = useAppStore(s => s.createProjectFromIntake);
+  const [formData, setFormData] = React.useState<IntakeFormState>(initialState);
 
-  const [formData, setFormData] = useState<IntakeFormData>({
-    productName: '',
-    audience: '',
-    problem: '',
-    whyCurrentFails: '',
-    promise: '',
-    mustHaves: '',
-    notNow: '',
-    constraints: '',
-  })
-  const hasRedirected = useRef(false)
-
-  // Redirect to account if not authenticated (only on initial load)
-  useEffect(() => {
-    // Skip auth check if disabled (DEV ONLY)
-    if (NEXT_PUBLIC_DISABLE_AUTH) return
-    
-    if (authReady && !isAuthenticated && !hasRedirected.current) {
-      hasRedirected.current = true
-      router.push('/account')
-    }
-  }, [authReady, isAuthenticated, router])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    try {
-      // Phase 7: Create project from intake with multi-versioning support
-      const { projectId, versionId } = useAppStore.getState().createProjectFromIntake(formData)
-
-      // Navigate to insight with project and version context
-      router.push(`/insight?projectId=${projectId}&versionId=${versionId}`)
-    } catch (error) {
-      console.error('Failed to create project:', error)
-      // Error is handled by the store
-    }
+  function toList(value: string) {
+    return value
+      .split('\n')
+      .map(item => item.trim())
+      .filter(Boolean);
   }
 
-  const handleInputChange = (field: keyof IntakeFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  function handleInputChange(field: keyof IntakeFormState, value: string) {
+    setFormData(prev => ({ ...prev, [field]: value }));
   }
 
-  // Show loading while checking authentication
-  if (!authReady) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Checking authentication...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return null // Will redirect via useEffect
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const { projectId, versionId } = createProjectFromIntake({
+      name: formData.name,
+      audience: formData.audience,
+      problem: formData.problem,
+      whyCurrentFails: formData.whyCurrentFails,
+      promise: formData.promise,
+      mustHaves: toList(formData.mustHaves),
+      notNow: toList(formData.notNow),
+      constraints: formData.constraints,
+    });
+    router.push(`/insight?projectId=${projectId}&versionId=${versionId}`);
+    setFormData(initialState);
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Let's define your product.</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Let&apos;s define your product.</h1>
         <p className="text-muted-foreground mt-2">
-          Answer in plain language. We'll handle the rest.
+          Answer in plain language. We&apos;ll handle the rest.
         </p>
       </div>
 
@@ -98,17 +78,18 @@ export default function IntakePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label htmlFor="productName" className="block text-sm font-medium mb-2">
-                What's your product called?
+              <label htmlFor="name" className="block text-sm font-medium mb-2">
+                What&apos;s your product called?
               </label>
               <p className="text-sm text-muted-foreground mb-2">
-                Give it a name that reflects what it does or who it's for.
+                Give it a name that reflects what it does or who it&apos;s for.
               </p>
               <Input
-                id="productName"
-                value={formData.productName}
-                onChange={(e) => handleInputChange('productName', e.target.value)}
+                id="name"
+                value={formData.name}
+                onChange={(event) => handleInputChange('name', event.target.value)}
                 placeholder="e.g., CashPilot, ChairPro, TaskMaster"
+                required
               />
             </div>
 
@@ -122,8 +103,9 @@ export default function IntakePage() {
               <Input
                 id="audience"
                 value={formData.audience}
-                onChange={(e) => handleInputChange('audience', e.target.value)}
+                onChange={(event) => handleInputChange('audience', event.target.value)}
                 placeholder="e.g., Solo entrepreneurs, Small business owners, Freelancers"
+                required
               />
             </div>
           </CardContent>
@@ -144,9 +126,10 @@ export default function IntakePage() {
               <Textarea
                 id="problem"
                 value={formData.problem}
-                onChange={(e) => handleInputChange('problem', e.target.value)}
+                onChange={(event) => handleInputChange('problem', event.target.value)}
                 placeholder="e.g., Small businesses struggle to track cash flow in real-time, leading to poor financial decisions..."
                 rows={3}
+                required
               />
             </div>
 
@@ -155,30 +138,32 @@ export default function IntakePage() {
                 Why do current solutions fall short?
               </label>
               <p className="text-sm text-muted-foreground mb-2">
-                What's wrong with existing tools or approaches?
+                What&apos;s wrong with existing tools or approaches?
               </p>
               <Textarea
                 id="whyCurrentFails"
                 value={formData.whyCurrentFails}
-                onChange={(e) => handleInputChange('whyCurrentFails', e.target.value)}
-                placeholder="e.g., Existing tools are too complex, expensive, or don't integrate with existing workflows..."
+                onChange={(event) => handleInputChange('whyCurrentFails', event.target.value)}
+                placeholder="e.g., Existing tools are too complex, expensive, or don&apos;t integrate with existing workflows..."
                 rows={3}
+                required
               />
             </div>
 
             <div>
               <label htmlFor="promise" className="block text-sm font-medium mb-2">
-                What's your core promise?
+                What&apos;s your core promise?
               </label>
               <p className="text-sm text-muted-foreground mb-2">
-                What will users get that they can't get elsewhere?
+                What will users get that they can&apos;t get elsewhere?
               </p>
               <Textarea
                 id="promise"
                 value={formData.promise}
-                onChange={(e) => handleInputChange('promise', e.target.value)}
+                onChange={(event) => handleInputChange('promise', event.target.value)}
                 placeholder="e.g., Automated cash flow tracking that works in the background, giving you insights without the work..."
                 rows={3}
+                required
               />
             </div>
           </CardContent>
@@ -199,66 +184,56 @@ export default function IntakePage() {
               <Textarea
                 id="mustHaves"
                 value={formData.mustHaves}
-                onChange={(e) => handleInputChange('mustHaves', e.target.value)}
-                placeholder="Real-time cash flow tracking&#10;Automated categorization&#10;Financial forecasting&#10;Integration with bank accounts"
+                onChange={(event) => handleInputChange('mustHaves', event.target.value)}
+                placeholder="e.g., Real-time dashboard
+Automated categorization
+Alerts for anomalies"
                 rows={4}
+                required
               />
             </div>
 
             <div>
               <label htmlFor="notNow" className="block text-sm font-medium mb-2">
-                What features can wait? (one per line)
+                What should wait until later? (one per line)
               </label>
               <p className="text-sm text-muted-foreground mb-2">
-                Features that would be nice but aren't critical for launch.
+                Capture future ideas so everyone knows they are parked.
               </p>
               <Textarea
                 id="notNow"
                 value={formData.notNow}
-                onChange={(e) => handleInputChange('notNow', e.target.value)}
-                placeholder="Mobile app&#10;Advanced reporting&#10;Team collaboration&#10;API for third-party integrations"
-                rows={4}
+                onChange={(event) => handleInputChange('notNow', event.target.value)}
+                placeholder="e.g., Advanced analytics
+Marketplace integrations"
+                rows={3}
               />
             </div>
 
             <div>
               <label htmlFor="constraints" className="block text-sm font-medium mb-2">
-                Any constraints or limitations?
+                Any constraints or guardrails?
               </label>
               <p className="text-sm text-muted-foreground mb-2">
-                Budget, timeline, technical, or business constraints.
+                Share timelines, budgets, or dependencies the team should respect.
               </p>
               <Textarea
                 id="constraints"
                 value={formData.constraints}
-                onChange={(e) => handleInputChange('constraints', e.target.value)}
-                placeholder="Must launch within 3 months&#10;Budget under $50k&#10;Must work offline&#10;Compliance with financial regulations"
+                onChange={(event) => handleInputChange('constraints', event.target.value)}
+                placeholder="e.g., Launch within 90 days; budget capped at $15k; must integrate with QuickBooks."
                 rows={3}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Error Display */}
-        {error && (
-          <div className="rounded-lg border-red-200 bg-red-50 dark:bg-red-900/20 p-4">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
-          </div>
-        )}
-
         <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={loading} data-testid="submit-project">
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating Project...
-              </>
-            ) : (
-              'Generate Insight'
-            )}
+          <Button type="submit" size="lg">
+            Generate Insight
           </Button>
         </div>
       </form>
     </div>
-  )
+  );
 }

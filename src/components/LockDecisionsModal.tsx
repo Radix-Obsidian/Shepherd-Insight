@@ -3,31 +3,34 @@
 import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import type { LockedDecisions } from '@/types/project'
 
 export interface LockDecisionsModalProps {
   isOpen: boolean
   onClose: () => void
   mustHaves: string[]
   notNow: string[]
+  initialLocked: LockedDecisions
+  onSave: (locked: LockedDecisions) => void
 }
 
 export function LockDecisionsModal({ 
   isOpen, 
   onClose, 
   mustHaves, 
-  notNow 
+  notNow,
+  initialLocked,
+  onSave,
 }: LockDecisionsModalProps) {
-  const [lockedMustHaves, setLockedMustHaves] = React.useState<string[]>([])
-  const [lockedNotNow, setLockedNotNow] = React.useState<string[]>([])
+  const [lockedMustHaves, setLockedMustHaves] = React.useState<string[]>(initialLocked.mustHavesLocked)
+  const [lockedNotNow, setLockedNotNow] = React.useState<string[]>(initialLocked.notNowLocked)
 
   React.useEffect(() => {
     if (isOpen) {
-      // Reset selections when modal opens
-      setLockedMustHaves([])
-      setLockedNotNow([])
+      setLockedMustHaves(initialLocked.mustHavesLocked)
+      setLockedNotNow(initialLocked.notNowLocked)
     }
-  }, [isOpen])
+  }, [isOpen, initialLocked.mustHavesLocked, initialLocked.notNowLocked])
 
   const toggleMustHave = (feature: string) => {
     setLockedMustHaves(prev => 
@@ -46,8 +49,10 @@ export function LockDecisionsModal({
   }
 
   const handleLockDecisions = () => {
-    // For now, just close the modal
-    // In the future, this will persist the locked decisions
+    onSave({
+      mustHavesLocked: lockedMustHaves,
+      notNowLocked: lockedNotNow,
+    })
     onClose()
   }
 
@@ -67,9 +72,9 @@ export function LockDecisionsModal({
               ✕
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Select the features you want to lock in. This protects your scope and keeps you focused on what matters first.
-          </p>
+            <p className="text-sm text-muted-foreground">
+              Select the features you want to lock in. This protects your scope and keeps you focused on what matters first.
+            </p>
         </CardHeader>
         
         <CardContent className="space-y-6">

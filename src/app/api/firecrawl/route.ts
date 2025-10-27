@@ -1,217 +1,344 @@
-import { NextRequest, NextResponse } from 'next/server'
+'use server';
 
-// Mock competitor research and web scraping for testing purposes
+import { logger } from '@/lib/logger';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { FirecrawlClient } from '@/lib/research/firecrawl-client';
+import { GroqClient } from '@/lib/research/groq-client';
+
+const firecrawl = new FirecrawlClient();
+const groq = new GroqClient({ temperature: 0.25 });
+
+type SourceSnippet = {
+  url: string;
+  title: string;
+  snippet: string;
+};
+
+const CompetitorAnalysisSchema = z.object({
+  competitors: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().optional(),
+        description: z.string(),
+        features: z.array(z.string()).optional(),
+        pricing: z.string().optional(),
+        strengths: z.string(),
+        weaknesses: z.string(),
+        targetAudience: z.string().optional(),
+      })
+    )
+    .min(1),
+  marketInsights: z.object({
+    totalMarketSize: z.string().optional(),
+    growthRate: z.string().optional(),
+    keyTrends: z.array(z.string()).min(1),
+    opportunityGaps: z.array(z.string()).min(1),
+  }),
+  recommendations: z.array(z.string()).min(1),
+});
+
+const MarketResearchSchema = z.object({
+  marketOverview: z.object({
+    size: z.string().optional(),
+    growth: z.string().optional(),
+    segments: z.array(z.string()).optional(),
+  }),
+  trends: z
+    .array(
+      z.object({
+        trend: z.string(),
+        impact: z.string(),
+        description: z.string(),
+      })
+    )
+    .min(1),
+  customerPainPoints: z.array(z.string()).min(1),
+  opportunities: z.array(z.string()).min(1),
+  recommendedAngles: z.array(z.string()).min(1),
+});
+
+const FeatureBenchmarkSchema = z.object({
+  feature: z.string(),
+  competitors: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().optional(),
+        hasFeature: z.string(),
+        implementation: z.string(),
+        pricing: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .min(1),
+  marketAdoption: z.string(),
+  differentiationOpportunity: z.string(),
+  recommendedPositioning: z.array(z.string()).min(1),
+});
+
+async function fetchSearchSnippets(query?: string, limit = 5): Promise<SourceSnippet[]> {
+  if (!query) return [];
+  try {
+    const result = (await firecrawl.search(query, { limit })) as any;
+    const items = Array.isArray(result?.data) ? result.data : [];
+    const snippets: SourceSnippet[] = [];
+    for (const item of items) {
+      const url = String(item?.url ?? item?.link ?? '').trim();
+      if (!url) continue;
+      const title = String(item?.title ?? item?.source ?? url).trim();
+      const description =
+        String(item?.description ?? item?.snippet ?? item?.content ?? '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      snippets.push({
+        url,
+        title,
+        snippet: description.slice(0, 800),
+      });
+    }
+    return snippets;
+  } catch (error) {
+    logger.error('Firecrawl search error:', error);
+    return [];
+  }
+}
+
+async function fetchCompetitorSnippets(urls: string[]): Promise<SourceSnippet[]> {
+  const unique = Array.from(new Set(urls.filter(Boolean)));
+  const results = await Promise.all(
+    unique.map(async url => {
+      try {
+        const scraped = (await firecrawl.scrapeUrl(url, {
+          formats: ['markdown'],
+          onlyMainContent: true,
+        })) as any;
+        const data = scraped?.data ?? {};
+        const content: string =
+          typeof data?.content === 'string'
+            ? data.content
+            : typeof data?.markdown === 'string'
+            ? data.markdown
+            : Array.isArray(data?.content)
+            ? data.content.join('\n')
+            : '';
+        if (!content) return null;
+        const cleaned = content.replace(/\s+/g, ' ').trim();
+        return {
+          url,
+          title: String(data?.title ?? url).trim(),
+          snippet: cleaned.slice(0, 1200),
+        };
+      } catch (error) {
+        logger.warn(`Failed to scrape ${url}:`, error);
+        return null;
+      }
+    })
+  );
+  return results.filter((item): item is SourceSnippet => Boolean(item));
+}
+
+function dedupeSources(sources: SourceSnippet[]) {
+  const seen = new Set<string>();
+  return sources.filter(source => {
+    const key = source.url || source.title;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function buildResearchDigest(label: string, sources: SourceSnippet[]) {
+  if (!sources.length) return `${label}:\n- No data collected`;
+  return `${label}:\n${sources
+    .map(
+      (src, index) =>
+        `Source ${index + 1} — ${src.title}\nURL: ${src.url}\nSummary: ${src.snippet}`
+    )
+    .join('\n\n')}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, query, competitors, marketSegment } = body
+    const body = await request.json();
+    const { action, query, competitors = [], marketSegment, feature } = body ?? {};
 
-    // Simulate web scraping delay
-    await new Promise(resolve => setTimeout(resolve, 1200))
+    if (!action) {
+      return NextResponse.json({ error: 'action is required' }, { status: 400 });
+    }
 
     switch (action) {
       case 'competitor-analysis': {
-        const mockCompetitorData = {
-          competitors: [
-            {
-              name: "QuickBooks",
-              url: "quickbooks.intuit.com",
-              description: "Popular accounting software for small businesses",
-              features: [
-                "Invoice generation",
-                "Expense tracking",
-                "Financial reporting",
-                "Bank integration"
-              ],
-              pricing: "$15-200/month",
-              strengths: "Comprehensive features, trusted brand",
-              weaknesses: "Complex interface, expensive for small users",
-              targetAudience: "Small to medium businesses"
-            },
-            {
-              name: "FreshBooks",
-              url: "freshbooks.com",
-              description: "Cloud accounting software for service-based businesses",
-              features: [
-                "Time tracking",
-                "Project management",
-                "Client invoicing",
-                "Expense management"
-              ],
-              pricing: "$19-60/month",
-              strengths: "User-friendly, good for freelancers",
-              weaknesses: "Limited advanced features",
-              targetAudience: "Freelancers and service businesses"
-            },
-            {
-              name: "Wave",
-              url: "waveapps.com",
-              description: "Free accounting software for small businesses",
-              features: [
-                "Free invoicing",
-                "Receipt scanning",
-                "Basic reporting",
-                "Credit card processing"
-              ],
-              pricing: "Free (with paid add-ons)",
-              strengths: "Completely free, simple to use",
-              weaknesses: "Limited features, ads in interface",
-              targetAudience: "Very small businesses and startups"
-            },
-            {
-              name: "Xero",
-              url: "xero.com",
-              description: "Cloud-based accounting platform",
-              features: [
-                "Advanced reporting",
-                "Multi-currency support",
-                "Inventory management",
-                "Payroll integration"
-              ],
-              pricing: "$13-70/month",
-              strengths: "Powerful features, good for growing businesses",
-              weaknesses: "Steep learning curve",
-              targetAudience: "Growing small businesses"
-            }
-          ],
-
-          marketInsights: {
-            totalMarketSize: "$5.2 billion",
-            growthRate: "8.3% annually",
-            keyTrends: [
-              "Shift to cloud-based solutions",
-              "Integration with banking APIs",
-              "Mobile-first accounting apps",
-              "AI-powered categorization"
-            ],
-            opportunityGaps: [
-              "Real-time cash flow visibility",
-              "Automated decision support",
-              "Industry-specific templates",
-              "Simplified setup for non-accountants"
-            ]
-          },
-
-          recommendations: [
-            "Differentiate with real-time insights and automated recommendations",
-            "Target solo operators who find current tools too complex",
-            "Focus on mobile experience and quick setup",
-            "Consider freemium model to compete with Wave"
-          ]
+        if (!query && (!competitors || competitors.length === 0)) {
+          return NextResponse.json(
+            { error: 'Provide a query or a list of competitor URLs.' },
+            { status: 400 }
+          );
         }
 
+        const searchSnippets = await fetchSearchSnippets(query, 6);
+        const scrapedSnippets = await fetchCompetitorSnippets(competitors);
+        const sources = dedupeSources([...scrapedSnippets, ...searchSnippets]);
+
+        if (!sources.length) {
+          return NextResponse.json(
+            { error: 'Unable to retrieve competitor data from Firecrawl.' },
+            { status: 502 }
+          );
+        }
+
+        const prompt = `
+You are a competitive intelligence analyst. Using the research snippets provided, produce a structured competitor report that adheres to the target schema.
+
+Business Objective:
+- Query: ${query ?? 'N/A'}
+- Competitors supplied: ${competitors?.join(', ') || 'None'}
+
+Research Packets:
+${buildResearchDigest('Competitor Sources', sources)}
+
+Guidelines:
+- Base every statement on the research content above.
+- If a detail is unknown, state "Unknown" instead of inventing data.
+- Highlight differentiation opportunities for a new entrant.
+`;
+
+        const competitorData = await groq.structuredOutputWithFallback(
+          prompt,
+          CompetitorAnalysisSchema,
+          { temperature: 0.25 }
+        );
+
         return NextResponse.json({
-          competitorData: mockCompetitorData,
-          searchQuery: query,
-          scrapedAt: new Date().toISOString()
-        })
+          competitorData,
+          sources,
+          scrapedAt: new Date().toISOString(),
+        });
       }
 
       case 'market-research': {
-        const mockMarketData = {
-          marketOverview: {
-            size: "$12.3 billion",
-            growth: "12% CAGR through 2028",
-            segments: [
-              "Solo entrepreneurs (<$100K revenue)",
-              "Small businesses ($100K-$1M revenue)",
-              "Growing businesses ($1M-$10M revenue)"
-            ]
-          },
-
-          trends: [
-            {
-              trend: "Automation adoption",
-              impact: "High",
-              description: "Businesses increasingly seek automated financial processes"
-            },
-            {
-              trend: "Mobile accounting",
-              impact: "Medium",
-              description: "Mobile apps becoming essential for on-the-go management"
-            },
-            {
-              trend: "Integration ecosystem",
-              impact: "High",
-              description: "APIs and integrations drive platform selection"
-            }
-          ],
-
-          customerPainPoints: [
-            "Manual data entry and reconciliation",
-            "Lack of real-time financial visibility",
-            "Complex setup and learning curves",
-            "High costs for advanced features",
-            "Poor mobile experience"
-          ],
-
-          opportunities: [
-            "AI-powered categorization and insights",
-            "Real-time cash flow monitoring",
-            "Simplified setup for non-accountants",
-            "Mobile-first design",
-            "Affordable pricing for small users"
-          ]
+        const researchQuery = marketSegment || query;
+        if (!researchQuery) {
+          return NextResponse.json(
+            { error: 'Provide a marketSegment or query for market research.' },
+            { status: 400 }
+          );
         }
 
+        const searchSnippets = await fetchSearchSnippets(
+          `${researchQuery} market size trends`,
+          6
+        );
+        if (!searchSnippets.length) {
+          return NextResponse.json(
+            { error: 'Unable to retrieve market research data from Firecrawl.' },
+            { status: 502 }
+          );
+        }
+
+        const prompt = `
+You are a market analyst. Summarize the market landscape using the research snippets below. Produce JSON matching the schema.
+
+Target Market: ${researchQuery}
+
+Research Snippets:
+${buildResearchDigest('Market References', searchSnippets)}
+
+Guidelines:
+- Infer directionally accurate numbers when exact figures are not available; label them as estimates.
+- Surface emerging trends, pain points, and whitespace opportunities grounded in the snippets.
+- Provide actionable recommendations for positioning.
+`;
+
+        const marketResearch = await groq.structuredOutputWithFallback(
+          prompt,
+          MarketResearchSchema,
+          { temperature: 0.2 }
+        );
+
         return NextResponse.json({
-          marketResearch: mockMarketData,
-          query: marketSegment,
-          researchedAt: new Date().toISOString()
-        })
+          marketResearch,
+          sources: searchSnippets,
+          researchedAt: new Date().toISOString(),
+        });
       }
 
       case 'feature-benchmark': {
-        const mockBenchmark = {
-          feature: query,
-          competitors: [
-            {
-              name: "QuickBooks",
-              hasFeature: true,
-              implementation: "Advanced but complex",
-              pricing: "Included in higher tiers"
-            },
-            {
-              name: "FreshBooks",
-              hasFeature: true,
-              implementation: "Basic implementation",
-              pricing: "Included in all plans"
-            },
-            {
-              name: "Wave",
-              hasFeature: false,
-              implementation: "Not available",
-              pricing: "N/A"
-            },
-            {
-              name: "Xero",
-              hasFeature: true,
-              implementation: "Comprehensive",
-              pricing: "Add-on service"
-            }
-          ],
-
-          marketAdoption: "68% of competitors offer this feature",
-          averagePricing: "$25/month when available",
-          differentiationOpportunity: "Real-time insights and automated recommendations"
+        const benchmarkQuery = feature || query;
+        if (!benchmarkQuery) {
+          return NextResponse.json(
+            { error: 'Provide a feature to benchmark via "feature" or "query".' },
+            { status: 400 }
+          );
         }
 
+        const competitorQueries = [
+          `${benchmarkQuery} software competitors`,
+          ...(Array.isArray(competitors)
+            ? competitors.map((url: string) => `${url} ${benchmarkQuery}`)
+            : []),
+        ];
+
+        const searchSnippets = (
+          await Promise.all(competitorQueries.map(q => fetchSearchSnippets(q, 3)))
+        ).flat();
+
+        const scrapedSnippets = await fetchCompetitorSnippets(
+          Array.isArray(competitors) ? competitors : []
+        );
+        const sources = dedupeSources([...searchSnippets, ...scrapedSnippets]);
+
+        if (!sources.length) {
+          return NextResponse.json(
+            { error: 'Unable to retrieve benchmark data from Firecrawl.' },
+            { status: 502 }
+          );
+        }
+
+        const prompt = `
+You are a product strategist. Benchmark the feature "${benchmarkQuery}" across the researched competitors.
+
+Research Packets:
+${buildResearchDigest('Feature Research', sources)}
+
+Instructions:
+- Identify whether each competitor offers the feature (answer "Yes", "No", or "Partial" in hasFeature).
+- Describe how the feature is implemented and priced, if mentioned.
+- Highlight differentiation opportunities grounded in what competitors do or fail to do.
+- Provide concrete positioning angles for a new entrant.
+`;
+
+        const benchmark = await groq.structuredOutputWithFallback(
+          prompt,
+          FeatureBenchmarkSchema,
+          { temperature: 0.25 }
+        );
+
         return NextResponse.json({
-          benchmark: mockBenchmark,
-          analyzedAt: new Date().toISOString()
-        })
+          benchmark,
+          sources,
+          analyzedAt: new Date().toISOString(),
+        });
       }
 
       default:
-        return NextResponse.json({
-          error: 'Invalid action. Supported actions: competitor-analysis, market-research, feature-benchmark'
-        }, { status: 400 })
+        return NextResponse.json(
+          {
+            error:
+              'Invalid action. Supported actions: competitor-analysis, market-research, feature-benchmark',
+          },
+          { status: 400 }
+        );
     }
   } catch (error: any) {
-    console.error('Firecrawl API error:', error)
+    logger.error('Firecrawl route error:', error);
     return NextResponse.json(
-      { error: error.message || 'Web scraping failed' },
+      {
+        error: 'Firecrawl processing failed',
+        details: error?.message ?? 'Unknown error',
+      },
       { status: 500 }
-    )
+    );
   }
 }

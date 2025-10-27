@@ -5,6 +5,7 @@
 
 import { GroqClient } from './groq-client'
 import { z } from 'zod'
+import { logger } from '@/lib/logger';
 
 export interface ModelConfig {
   name: string
@@ -319,7 +320,7 @@ Return the corrected data in the same format.`
         return JSON.parse(jsonMatch[0])
       }
     } catch (error) {
-      console.warn('Failed to fix data:', error)
+      logger.warn('Failed to fix data:', error)
     }
 
     return null

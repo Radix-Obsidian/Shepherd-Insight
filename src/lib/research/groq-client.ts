@@ -2,6 +2,7 @@ import { ChatGroq } from '@langchain/groq'
 import { HumanMessage, SystemMessage } from '@langchain/core/messages'
 import { z } from 'zod'
 import { getApiKey } from '@/lib/api-key-manager'
+import { logger } from '@/lib/logger';
 
 export interface GroqOptions {
   model?: string
@@ -109,7 +110,7 @@ export class GroqClient {
       const response = await this.llm.invoke(langchainMessages)
       return response.content
     } catch (error) {
-      console.error('Groq chat error:', error)
+      logger.error('Groq chat error:', error)
       throw new Error(`Chat completion failed: ${error}`)
     }
   }
@@ -147,7 +148,7 @@ export class GroqClient {
 
       return response as T
     } catch (error) {
-      console.error('Groq structured output error:', error)
+      logger.error('Groq structured output error:', error)
       throw new Error(`Structured output failed: ${error}`)
     }
   }
@@ -169,10 +170,10 @@ export class GroqClient {
     
     for (const model of models) {
       try {
-        console.log(`Attempting structured output with model: ${model}`)
+        logger.debug(`Attempting structured output with model: ${model}`)
         return await this.structuredOutput(prompt, schema, { ...options, model })
       } catch (error: any) {
-        console.warn(`Model ${model} failed, trying next model:`, error.message)
+        logger.warn(`Model ${model} failed, trying next model:`, error.message)
         if (model === models[models.length - 1]) {
           throw error // Rethrow on last attempt
         }
@@ -209,7 +210,7 @@ export class GroqClient {
 
       return response
     } catch (error) {
-      console.error('Groq research analysis error:', error)
+      logger.error('Groq research analysis error:', error)
       throw new Error(`Research analysis failed: ${error}`)
     }
   }
@@ -234,7 +235,7 @@ export class GroqClient {
 
       return await this.structuredOutput(prompt, schema)
     } catch (error) {
-      console.error('Groq structured insights error:', error)
+      logger.error('Groq structured insights error:', error)
       throw new Error(`Structured insights generation failed: ${error}`)
     }
   }
@@ -271,13 +272,13 @@ export class GroqClient {
           return JSON.parse(jsonMatch[0])
         }
       } catch (parseError) {
-        console.warn('Failed to parse JSON from response:', parseError)
+        logger.warn('Failed to parse JSON from response:', parseError)
       }
 
       // Fallback: return the raw response
       return { nodes: [], edges: [], rawResponse: String(response) }
     } catch (error) {
-      console.error('Groq mind map conversion error:', error)
+      logger.error('Groq mind map conversion error:', error)
       throw new Error(`Mind map conversion failed: ${error}`)
     }
   }

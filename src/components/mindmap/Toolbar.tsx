@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button'
 import { 
   UserCircle, 
@@ -47,7 +48,7 @@ export function Toolbar({ canvasRef }: ToolbarProps) {
       a.download = `mindmap-${Date.now()}.png`
       a.click()
     } catch (error) {
-      console.error('Export image failed:', error)
+      logger.error('Export image failed:', error)
     }
   }
 
@@ -66,7 +67,7 @@ export function Toolbar({ canvasRef }: ToolbarProps) {
       pdf.addImage(img, 'PNG', 0, 0, w, h)
       pdf.save(`mindmap-${Date.now()}.pdf`)
     } catch (error) {
-      console.error('Export PDF failed:', error)
+      logger.error('Export PDF failed:', error)
     }
   }
 
@@ -80,13 +81,13 @@ export function Toolbar({ canvasRef }: ToolbarProps) {
         await document.exitFullscreen()
       }
     } catch (error) {
-      console.error('Presentation mode failed:', error)
+      logger.error('Presentation mode failed:', error)
     }
   }
 
   const handleHelp = () => {
     // TODO: Implement help functionality
-    console.log('Help')
+    logger.debug('Help')
   }
 
   return (

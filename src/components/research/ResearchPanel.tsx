@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -107,7 +108,7 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
   const handleViewMindMap = () => {
     if (result?.mindmapJson) {
       // TODO: Open mind map with generated data
-      console.log('Opening mind map with data:', result.mindmapJson)
+      logger.debug('Opening mind map with data:', result.mindmapJson)
     }
   }
 

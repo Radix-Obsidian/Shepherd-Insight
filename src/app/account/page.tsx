@@ -166,7 +166,7 @@ export default function AccountPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Now that you're authenticated, you can create and manage projects!
+              Now that you&apos;re authenticated, you can create and manage projects!
             </p>
             <div className="flex gap-2">
               <Button onClick={() => router.push('/dashboard')}>

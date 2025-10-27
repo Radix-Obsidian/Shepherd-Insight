@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FiresearchAdapter } from '@/lib/research/firesearch-adapter'
 import { supabase } from '@/lib/supabase'
 import { InsightData } from '@/types/insight'
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
-    const { projectId, query, depth, competitorUrls, useWebhook, webhookUrl } = await request.json()
+    const payload = await request.json()
+    if (typeof payload !== 'object' || payload === null) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+    const { projectId, query, depth, competitorUrls, useWebhook, webhookUrl } = payload as Record<string, unknown>
 
-    if (!projectId || !query) {
+    if (typeof projectId !== 'string' || typeof query !== 'string' || !projectId || !query) {
       return NextResponse.json({ error: 'Project ID and query are required.' }, { status: 400 })
     }
 
@@ -25,7 +30,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (jobError) {
-      console.error('Supabase insert job error:', jobError)
+      logger.error('Supabase insert job error:', jobError)
       throw new Error(`Failed to create research job: ${jobError.message}`)
     }
 
@@ -46,7 +51,7 @@ export async function POST(request: NextRequest) {
         .eq('id', jobId)
         .then(({ error }) => {
           if (error) {
-            console.error('Failed to update job progress:', error)
+            logger.error('Failed to update job progress:', error)
           }
         })
     })
@@ -59,9 +64,9 @@ export async function POST(request: NextRequest) {
         // Run async with webhook support
         jobIdForTracking = await workflow.runAsync({
           query,
-          depth: depth || 2,
-          competitorUrls: competitorUrls || [],
-          webhookUrl
+          depth: typeof depth === 'number' ? depth : 2,
+          competitorUrls: Array.isArray(competitorUrls) ? competitorUrls : [],
+          webhookUrl: typeof webhookUrl === 'string' ? webhookUrl : ''
         })
         
         // For async operations, return immediately with job ID
@@ -75,8 +80,8 @@ export async function POST(request: NextRequest) {
         // Run synchronously
         insight = await workflow.run({
           query,
-          depth: depth || 2,
-          competitorUrls: competitorUrls || []
+          depth: typeof depth === 'number' ? depth : 2,
+          competitorUrls: Array.isArray(competitorUrls) ? competitorUrls : [],
         })
 
         // Save the final insight data
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (insightError) {
-          console.error('Supabase insert insight error:', insightError)
+          logger.error('Supabase insert insight error:', insightError)
           throw new Error(`Failed to save insight: ${insightError.message}`)
         }
 
@@ -112,13 +117,13 @@ export async function POST(request: NextRequest) {
         })
       }
 
-    } catch (workflowError: any) {
+    } catch (workflowError: unknown) {
       // Update job with failed status
       await supabase
         .from('insight_jobs')
         .update({
           status: 'failed',
-          error: workflowError.message,
+          error: workflowError instanceof Error ? workflowError.message : 'Research failed',
           updated_at: new Date().toISOString(),
         })
         .eq('id', jobId)
@@ -126,10 +131,11 @@ export async function POST(request: NextRequest) {
       throw workflowError
     }
 
-  } catch (error: any) {
-    console.error('Research API error:', error)
+  } catch (error: unknown) {
+    logger.error('Research API error:', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -157,7 +163,7 @@ export async function GET(request: NextRequest) {
     const { data: jobData, error: jobError } = await query.single()
 
     if (jobError) {
-      console.error('Failed to fetch job:', jobError)
+      logger.error('Failed to fetch job:', jobError)
       return NextResponse.json({ error: 'Job not found' }, { status: 404 })
     }
 
@@ -180,10 +186,11 @@ export async function GET(request: NextRequest) {
       insight: insightData
     })
 
-  } catch (error: any) {
-    console.error('Job status API error:', error)
+  } catch (error: unknown) {
+    logger.error('Job status API error:', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }

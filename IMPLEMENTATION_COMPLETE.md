@@ -68,9 +68,9 @@ npm run dev
 ```bash
 # 1. Get Supabase access token from:
 # https://supabase.com/dashboard/account/tokens
-
+sbp_bccd0f363a18448fb4e7908d19a9d1b5acdeaf66
 # 2. Set token
-export SUPABASE_ACCESS_TOKEN=<your-token>
+export SUPABASE_ACCESS_TOKEN=<sbp_bccd0f363a18448fb4e7908d19a9d1b5acdeaf66>
 
 # 3. Run automated setup
 npm run setup:supabase

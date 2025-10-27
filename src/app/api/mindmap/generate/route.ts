@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { MindMapNode, MindMapEdge, NODE_COLORS } from '@/lib/mindmap/types'
 import { GroqClient } from '@/lib/research/groq-client'
 import { z } from 'zod'
+import { logger } from '@/lib/logger';
 
 // Schema for AI-generated mind map structure
 const MindMapSchema = z.object({
@@ -133,7 +134,7 @@ Return a JSON structure with nodes and edges arrays.`
     })
 
   } catch (error: any) {
-    console.error('Mind map generation error:', error)
+    logger.error('Mind map generation error:', error)
     
     // Fallback to mock data if AI generation fails
     const fallbackNodes: MindMapNode[] = [

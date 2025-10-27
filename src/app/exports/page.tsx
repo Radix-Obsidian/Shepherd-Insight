@@ -1,161 +1,81 @@
-'use client'
+'use client';
 
-import { Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PageHeader } from '@/components/onboarding/PageHeader'
-import { buildMarkdown, downloadFile } from '@/lib/export'
-import { useAppStore, useProjects, useDraftVersionData } from '@/lib/store'
+import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAppStore } from '@/lib/store';
+import { buildMarkdown, downloadTextFile, buildAndDownloadPDF } from '@/lib/export';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
-function ExportsPageContent() {
-  const searchParams = useSearchParams()
-  const projectId = searchParams.get('projectId')
-  const versionId = searchParams.get('versionId')
+export default function ExportsPage() {
+  const params = useSearchParams();
+  const projectId = params.get('projectId') || '';
+  const versionId = params.get('versionId') || '';
+  const version = useAppStore(s => s.getProjectVersion(projectId, versionId));
 
-  const projects = useProjects()
-  const draftData = useDraftVersionData()
-
-  // Get version data from URL params or fall back to draft
-  const currentVersion = projectId && versionId 
-    ? useAppStore.getState().getProjectVersion(projectId, versionId)
-    : null
-
-  const versionData = currentVersion || draftData
-
-  if (!versionData) {
+  if (!projectId || !versionId || !version) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Export Your Insight Brief"
-          description="Download something you can send to designers, devs, and investors."
-        />
-        <Card className="text-center py-12">
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Export Your Insight Brief</CardTitle>
+          </CardHeader>
           <CardContent>
-            <h3 className="text-lg font-semibold mb-2">No data to export</h3>
-            <p className="text-muted-foreground mb-4">
-              Create a project first to export your insight brief.
+            <p className="text-sm text-gray-600">
+              No version selected. Open a project’s Insight or Vault and use the Export tab, or pass <code>?projectId=...&versionId=...</code> in the URL.
             </p>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  const handleMarkdownExport = () => {
-    const markdown = buildMarkdown(versionData)
-    const filename = `${versionData.name.replace(/\s+/g, '-').toLowerCase()}-insight.md`
-    downloadFile({
-      filename,
-      content: markdown,
-      mimeType: 'text/markdown'
-    })
+  const currentVersion = version!;
+
+  async function handleMd() {
+    const md = buildMarkdown(currentVersion);
+    const base = (currentVersion.data.name || 'project').toLowerCase().replace(/\s+/g, '-');
+    downloadTextFile(`${base}-insight-${currentVersion.label}.md`, md, 'text/markdown;charset=utf-8');
   }
 
-  const handlePDFExport = () => {
-    // Phase 6: Stub PDF export (downloads as text for prototype)
-    const markdown = buildMarkdown(versionData)
-    const filename = `${versionData.name.replace(/\s+/g, '-').toLowerCase()}-insight.pdf`
-    downloadFile({
-      filename,
-      content: markdown,
-      mimeType: 'text/plain' // Note: This is a prototype stub
-    })
+  async function handlePdf() {
+    await buildAndDownloadPDF(currentVersion, { includeMindmap: true, mindmapElementId: 'mindmap-canvas' });
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Export Your Insight Brief"
-        description="Download something you can send to designers, devs, and investors."
-      />
-
-      {/* Export Cards */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Markdown Export Card */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">📝</span>
-              Markdown Export
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Download your insight brief as a Markdown file. Perfect for GitHub, Notion, or any Markdown editor.
-            </p>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>✓ Full project details</li>
-              <li>✓ MVP features and constraints</li>
-              <li>✓ Positioning and personas</li>
-              <li>✓ Easy to read and edit</li>
-            </ul>
-            <Button 
-              onClick={handleMarkdownExport}
-              className="w-full"
-              size="lg"
-              data-testid="export-markdown"
-            >
-              Download as Markdown (.md)
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* PDF Export Card */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">📄</span>
-              PDF Export
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Download your insight brief as a PDF. Perfect for sharing with investors, contractors, or your team.
-            </p>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>✓ Professional formatting</li>
-              <li>✓ Ready to share</li>
-              <li>✓ All project details included</li>
-              <li>⚠️ Prototype: Text format</li>
-            </ul>
-            <Button 
-              onClick={handlePDFExport}
-              className="w-full"
-              size="lg"
-              variant="outline"
-            >
-              Download as PDF (.pdf)
-            </Button>
-            <p className="text-xs text-muted-foreground italic">
-              Note: PDF generation will be enhanced in a future update with proper server-side rendering.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Preview Section */}
+    <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Export Preview</CardTitle>
+          <CardTitle>Export Your Insight Brief</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <div><strong>Project:</strong> {versionData.name}</div>
-            <div><strong>Version:</strong> {versionData.version_number || 1}</div>
-            <div><strong>Timestamp:</strong> {versionData.created_at ? new Date(versionData.created_at).toLocaleString() : new Date().toLocaleString()}</div>
-            <div><strong>Sections:</strong> Problem Summary, Target Persona, Pain Points, MVP Features, Out of Scope, Constraints, Positioning Line, Mind Map Reference</div>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-lg border p-4">
+            <h3 className="font-medium mb-2">Markdown Export</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Download a clean .md brief you can paste into GitHub issues, Notion, or docs.
+            </p>
+            <Button onClick={handleMd}>Download as Markdown (.md)</Button>
+          </div>
+
+          <div className="rounded-lg border p-4">
+            <h3 className="font-medium mb-2">PDF Export</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Generate a shareable PDF with your brief and an embedded mind-map snapshot.
+            </p>
+            <Button onClick={handlePdf}>Download as PDF (.pdf)</Button>
           </div>
         </CardContent>
       </Card>
-    </div>
-  )
-}
 
-export default function ExportsPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ExportsPageContent />
-    </Suspense>
-  )
+      <Card>
+        <CardHeader>
+          <CardTitle>Tips</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-gray-600 space-y-2">
+          <p>• Ensure the mind-map canvas is visible on the Mind Map page for best image quality.</p>
+          <p>• Re-generate the PDF after updating decisions or features to keep the snapshot fresh.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

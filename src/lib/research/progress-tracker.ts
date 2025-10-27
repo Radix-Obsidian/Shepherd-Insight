@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env'
+import { logger } from '@/lib/logger';
 
 export interface ResearchProgress {
   jobId: string
@@ -132,7 +133,7 @@ export class ResearchProgressTracker {
         result: data.result_insight_id ? { insightId: data.result_insight_id } : undefined
       }
     } catch (error) {
-      console.error('Error fetching progress:', error)
+      logger.error('Error fetching progress:', error)
       return null
     }
   }

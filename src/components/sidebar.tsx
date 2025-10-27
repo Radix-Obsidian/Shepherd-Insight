@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { APP_NAME, APP_TAGLINE, NAVIGATION_ITEMS, DEFAULT_SIDEBAR_WIDTH } from '@/lib/constants'
-import { useSidebarCollapsed, useAppStore } from '@/lib/store'
+import { APP_NAME, APP_TAGLINE, NAVIGATION_ITEMS } from '@/lib/constants'
 import { 
   LayoutDashboard, 
   Lightbulb, 
@@ -34,8 +34,7 @@ const iconMap = {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const isCollapsed = useSidebarCollapsed()
-  const { toggleSidebar } = useAppStore()
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
     <div className={cn(
@@ -54,7 +53,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleSidebar}
+            onClick={() => setIsCollapsed(prev => !prev)}
             className="p-1 h-8 w-8"
           >
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

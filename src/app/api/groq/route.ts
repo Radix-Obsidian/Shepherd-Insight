@@ -1,115 +1,184 @@
-import { NextRequest, NextResponse } from 'next/server'
+'use server';
 
-// Mock AI analysis for testing purposes
+import { logger } from '@/lib/logger';
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { GroqClient } from '@/lib/research/groq-client';
+
+const groq = new GroqClient({ temperature: 0.2 });
+
+const AnalysisSchema = z.object({
+  summary: z.string(),
+  marketInsights: z.array(z.string()).min(3),
+  competitiveAnalysis: z.array(z.string()).min(3),
+  recommendations: z.array(z.string()).min(3),
+  riskAssessment: z.object({
+    technical: z.string(),
+    market: z.string(),
+    operational: z.string(),
+    competitive: z.string(),
+  }),
+});
+
+const InsightSchema = z.object({
+  keyInsights: z.array(z.string()).min(3),
+  positioning: z.object({
+    heroStatement: z.string(),
+    differentiators: z.array(z.string()).min(2),
+    targetPersona: z.string(),
+  }),
+  goToMarket: z.object({
+    channels: z.array(z.string()).min(2),
+    pricing: z.string(),
+    acquisition: z.string(),
+  }),
+});
+
+const EnhancedFeatureSchema = z.object({
+  enhancedFeatures: z.array(
+    z.object({
+      original: z.string(),
+      enhanced: z.string(),
+      rationale: z.string(),
+      priority: z.enum(['High', 'Medium', 'Low']),
+    })
+  ),
+  enhancementStrategy: z.string(),
+});
+
+type NormalizedProject = ReturnType<typeof normalizeProjectData>;
+
+function normalizeList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split('\n')
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeProjectData(input: Record<string, any>) {
+  return {
+    name: input.name ?? '',
+    audience: input.audience ?? '',
+    problem: input.problem ?? '',
+    whyCurrentFails: input.whyCurrentFails ?? input.why_current_fails ?? '',
+    promise: input.promise ?? '',
+    mustHaves: normalizeList(input.mustHaves ?? input.must_haves),
+    notNow: normalizeList(input.notNow ?? input.not_now),
+    constraints: input.constraints ?? '',
+    positioning: input.positioning ?? '',
+  };
+}
+
+function buildProjectContext(project: NormalizedProject) {
+  return `
+Project Name: ${project.name || 'Untitled'}
+Audience: ${project.audience || 'Not provided'}
+Problem: ${project.problem || 'Not provided'}
+Why Current Solutions Fail: ${project.whyCurrentFails || 'Not provided'}
+Core Promise: ${project.promise || 'Not provided'}
+Must Have Features: ${project.mustHaves.length ? project.mustHaves.join('; ') : 'None provided'}
+Out of Scope Features: ${project.notNow.length ? project.notNow.join('; ') : 'None provided'}
+Constraints: ${project.constraints || 'Not provided'}
+Positioning Statement: ${project.positioning || 'Not provided'}
+`.trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, projectData, userInput } = body
+    const body = await request.json();
+    const { action, projectData } = body;
 
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    if (!action) {
+      return NextResponse.json({ error: 'action is required' }, { status: 400 });
+    }
+
+    if (!projectData || typeof projectData !== 'object') {
+      return NextResponse.json({ error: 'projectData is required' }, { status: 400 });
+    }
+
+    const project = normalizeProjectData(projectData);
+
+    const context = buildProjectContext(project);
 
     switch (action) {
       case 'analyze-project': {
-        const mockAnalysis = {
-          summary: `This ${projectData.audience} solution for ${projectData.problem} shows strong market potential. The core promise of ${projectData.promise} addresses a clear pain point in the ${projectData.audience} workflow.`,
+        const prompt = `
+You are a product strategist. Analyze the following project data and respond with a JSON object that matches the provided schema.
 
-          marketInsights: [
-            `${projectData.audience} currently rely on manual processes or fragmented tools`,
-            `The ${projectData.why_current_fails} gap creates opportunity for integrated solutions`,
-            `Success depends on delivering ${projectData.promise} without adding complexity`,
-            `${projectData.constraints} are realistic constraints that inform scoping decisions`
-          ],
+${context}
 
-          competitiveAnalysis: [
-            "Existing tools focus on broad features rather than specific pain points",
-            "Most competitors don't understand the unique needs of solo operators",
-            "Integration complexity is a common failure point in this market",
-            "Users prioritize reliability over feature breadth in this category"
-          ],
-
-          recommendations: [
-            `Lead with ${projectData.must_haves[0]} as the hero feature`,
-            `Position against ${projectData.why_current_fails} as the key differentiator`,
-            `Bundle ${projectData.must_haves.slice(1, 3).join(', ')} as essential supporting features`,
-            `Defer ${projectData.not_now[0]} until post-launch validation`
-          ],
-
-          riskAssessment: {
-            technical: "Low - Standard web application architecture",
-            market: "Medium - Niche market requires precise positioning",
-            operational: "Low - Simple feature set reduces complexity",
-            competitive: "Medium - Established players but room for differentiation"
-          }
-        }
-
+Focus on actionable insight for a founding team. Keep answers concise but specific.
+`;
+        const analysis = await groq.structuredOutputWithFallback(prompt, AnalysisSchema, {
+          temperature: 0.25,
+        });
         return NextResponse.json({
-          analysis: mockAnalysis,
-          timestamp: new Date().toISOString()
-        })
+          analysis,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       case 'generate-insights': {
-        const mockInsights = {
-          keyInsights: [
-            `${projectData.problem} affects ${projectData.audience} productivity by 30-50%`,
-            `Current solutions fail because they ${projectData.why_current_fails.toLowerCase()}`,
-            `${projectData.audience} need ${projectData.promise} without added complexity`,
-            `${projectData.constraints} suggests a focused, iterative approach`
-          ],
+        const prompt = `
+You are an insight analyst. Using the project data below, produce positioning guidance and go-to-market recommendations.
 
-          positioning: {
-            heroStatement: `${projectData.name} helps ${projectData.audience} solve ${projectData.problem} by ${projectData.promise}.`,
-            differentiators: [
-              `Unlike alternatives, ${projectData.name} focuses specifically on ${projectData.audience} workflows`,
-              `Simple setup without ${projectData.why_current_fails}`,
-              `Core features that matter: ${projectData.must_haves.join(', ')}`
-            ],
-            targetPersona: `${projectData.audience} who are frustrated with ${projectData.problem} and need ${projectData.promise}`
-          },
+${context}
 
-          goToMarket: {
-            channels: [
-              "Direct outreach to solo entrepreneurs via communities",
-              "Content marketing around productivity pain points",
-              "Partnerships with complementary tools"
-            ],
-            pricing: "Freemium model with core features free, premium for advanced functionality",
-            acquisition: "Focus on organic growth through user communities and referrals"
-          }
-        }
-
+Return JSON that follows the schema. Each list should contain specific, non-generic guidance.
+`;
+        const insights = await groq.structuredOutputWithFallback(prompt, InsightSchema, {
+          temperature: 0.2,
+        });
         return NextResponse.json({
-          insights: mockInsights,
-          generatedAt: new Date().toISOString()
-        })
+          insights,
+          generatedAt: new Date().toISOString(),
+        });
       }
 
       case 'enhance-features': {
-        const enhancedFeatures = projectData.must_haves.map((feature: string, index: number) => ({
-          original: feature,
-          enhanced: `${feature} with smart automation and real-time sync`,
-          rationale: `Enhances user experience by reducing manual work while maintaining ${projectData.promise}`,
-          priority: index < 3 ? 'High' : 'Medium'
-        }))
+        if (!project.mustHaves.length) {
+          return NextResponse.json(
+            { error: 'Project must include at least one must-have feature.' },
+            { status: 400 }
+          );
+        }
 
+        const prompt = `
+You are a product architect. For each must-have feature listed, suggest one enhancement that increases differentiation while staying aligned with constraints.
+
+${context}
+
+Return JSON adhering to the schema. For priority, assign "High" to core MVP differentiators, "Medium" to supportive elements, and "Low" only when an enhancement stretches beyond MVP scope.
+`;
+        const enhanced = await groq.structuredOutputWithFallback(prompt, EnhancedFeatureSchema, {
+          temperature: 0.3,
+        });
         return NextResponse.json({
-          enhancedFeatures,
-          enhancementStrategy: "Focus on automation and integration while maintaining simplicity",
-          timestamp: new Date().toISOString()
-        })
+          ...enhanced,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       default:
-        return NextResponse.json({
-          error: 'Invalid action. Supported actions: analyze-project, generate-insights, enhance-features'
-        }, { status: 400 })
+        return NextResponse.json(
+          { error: `Unsupported action "${action}"` },
+          { status: 400 }
+        );
     }
   } catch (error: any) {
-    console.error('Groq API error:', error)
+    logger.error('Groq route error:', error);
     return NextResponse.json(
-      { error: error.message || 'AI analysis failed' },
+      {
+        error: 'Groq processing failed',
+        details: error?.message ?? 'Unknown error',
+      },
       { status: 500 }
-    )
+    );
   }
 }
