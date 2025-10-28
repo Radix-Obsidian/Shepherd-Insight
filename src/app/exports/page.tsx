@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { buildMarkdown, downloadTextFile, buildAndDownloadPDF } from '@/lib/export';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-export default function ExportsPage() {
+function ExportsPageContent() {
   const params = useSearchParams();
   const projectId = params.get('projectId') || '';
   const versionId = params.get('versionId') || '';
@@ -29,7 +30,7 @@ export default function ExportsPage() {
       </div>
     );
   }
-
+  
   const currentVersion = version!;
 
   async function handleMd() {

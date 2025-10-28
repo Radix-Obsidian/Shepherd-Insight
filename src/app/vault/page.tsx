@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import VersionSwitcher from '@/components/VersionSwitcher';
 import { useAppStore } from '@/lib/store';
 
-export default function VaultPage() {
+function VaultPageContent() {
   const params = useSearchParams();
   const projectId = params.get('projectId') || '';
   const versionId = params.get('versionId') || '';
@@ -120,5 +121,20 @@ export default function VaultPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function VaultPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Decision Vault</h1>
+          <p className="text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <VaultPageContent />
+    </Suspense>
   );
 }

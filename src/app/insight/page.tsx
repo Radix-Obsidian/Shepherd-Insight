@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SectionCard } from '@/components/SectionCard';
@@ -180,5 +181,16 @@ function InsightPageContent() {
 }
 
 export default function InsightPage() {
-  return <InsightPageContent />;
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Insight Report</h1>
+          <p className="text-muted-foreground mt-2">Loading...</p>
+        </div>
+      </div>
+    }>
+      <InsightPageContent />
+    </Suspense>
+  );
 }
