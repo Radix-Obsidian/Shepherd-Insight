@@ -3,6 +3,7 @@ import './globals.css'
 import { Sidebar } from '@/components/sidebar'
 import { RootLayoutClient } from '@/components/RootLayoutClient'
 import { APP_NAME } from '@/lib/constants'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
   title: APP_NAME,
@@ -27,6 +28,7 @@ export default function RootLayout({
             </main>
           </div>
         </RootLayoutClient>
+        <SpeedInsights />
       </body>
     </html>
   )
