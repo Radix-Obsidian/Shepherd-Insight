@@ -8,6 +8,13 @@ import { buildMarkdown, downloadTextFile, buildAndDownloadPDF } from '@/lib/expo
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
+const tabs = [
+  { label: 'Insight', href: '/insight' },
+  { label: 'Vault', href: '/vault' },
+  { label: 'Mind Map', href: '/mindmap' },
+  { label: 'Export', href: '/exports' },
+];
+
 function ExportsPageContent() {
   const params = useSearchParams();
   const projectId = params.get('projectId') || '';
@@ -26,7 +33,8 @@ function ExportsPageContent() {
               No version selected. Open a project’s Insight or Vault and use the Export tab, or pass <code>?projectId=...&versionId=...</code> in the URL.
             </p>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -44,7 +52,24 @@ function ExportsPageContent() {
  }
 
  return (
-   <div className="p-6 space-y-6">
+   <div className="space-y-6">
+     <nav className="flex gap-4 border-b pb-2 text-sm">
+       {tabs.map(tab => {
+         const href = `${tab.href}?projectId=${projectId}&versionId=${versionId}`;
+         const isActive = tab.href === '/exports';
+         return (
+           <Link
+             key={tab.href}
+             href={href}
+             className={isActive ? 'font-medium text-primary border-b-2 border-primary pb-1' : 'text-gray-600 hover:text-gray-900'}
+           >
+             {tab.label}
+           </Link>
+         );
+       })}
+     </nav>
+
+     <div className="p-6 space-y-6">
      <Card>
        <CardHeader>
          <CardTitle>Export Your Insight Brief</CardTitle>
