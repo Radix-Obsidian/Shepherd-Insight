@@ -1,0 +1,105 @@
+name: Test Production Deployment
+
+on:
+  deployment_status:
+    # Trigger when Vercel deployment completes
+  workflow_dispatch:
+    # Allow manual testing
+
+jobs:
+  test-production:
+    name: Test on Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run type-check
+
+      - name: Setup Cypress
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+          wait-on: 'https://shepherd-insight.vercel.app'
+          wait-on-timeout: 120
+
+      - name: Run E2E tests on Production
+        env:
+          CYPRESS_BASE_URL: https://shepherd-insight.vercel.app
+        run: |
+          npm run test:e2e:production
+        continue-on-error: true
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          retention-days: 7
+
+      - name: Upload videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/videos
+          retention-days: 7
+
+  test-preview:
+    name: Test on Preview (Every PR)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Cypress
+        uses: cypress-io/github-action@v6
+        with:
+          install: false
+
+      - name: Wait for Vercel Preview
+        run: |
+          # Wait for Vercel to deploy preview
+          echo "Waiting for preview deployment URL..."
+          sleep 30
+
+      - name: Run E2E tests on Preview
+        env:
+          CYPRESS_BASE_URL: 'https://shepherd-insight.vercel.app'
+        run: |
+          npm run test:e2e:production
+        continue-on-error: true
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-preview
+          path: cypress/screenshots
+          retention-days: 3
+

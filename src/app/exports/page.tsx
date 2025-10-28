@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import Link from 'next/link';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
@@ -30,28 +30,27 @@ function ExportsPageContent() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600">
-              No version selected. Open a project’s Insight or Vault and use the Export tab, or pass <code>?projectId=...&versionId=...</code> in the URL.
+              No version selected. Open a project&apos;s Insight or Vault and use the Export tab, or pass <code>?projectId=...&versionId=...</code> in the URL.
             </p>
           </CardContent>
-          </Card>
-        </div>
+        </Card>
       </div>
     );
   }
   
   const currentVersion = version!;
 
- async function handleMd() {
-   const md = buildMarkdown(currentVersion);
-   const base = (currentVersion.data.name || 'project').toLowerCase().replace(/\s+/g, '-');
-   downloadTextFile(`${base}-insight-${currentVersion.label}.md`, md, 'text/markdown;charset=utf-8');
- }
+  const handleMd = async () => {
+    const md = buildMarkdown(currentVersion);
+    const base = (currentVersion.data.name || 'project').toLowerCase().replace(/\s+/g, '-');
+    downloadTextFile(`${base}-insight-${currentVersion.label}.md`, md, 'text/markdown;charset=utf-8');
+  };
 
- async function handlePdf() {
-   await buildAndDownloadPDF(currentVersion, { includeMindmap: true, mindmapElementId: 'mindmap-canvas' });
- }
+  const handlePdf = async () => {
+    await buildAndDownloadPDF(currentVersion, { includeMindmap: true, mindmapElementId: 'mindmap-canvas' });
+  };
 
- return (
+  return (
    <div className="space-y-6">
      <nav className="flex gap-4 border-b pb-2 text-sm">
        {tabs.map(tab => {
@@ -102,25 +101,28 @@ function ExportsPageContent() {
          <p>• Re-generate the PDF after updating decisions or features to keep the snapshot fresh.</p>
        </CardContent>
      </Card>
-   </div>
- );
+     </div>
+    </div>
+  );
 }
 
 export default function ExportsPage() {
- return (
-   <Suspense fallback={
-     <div className="p-6">
-       <Card>
-         <CardHeader>
-           <CardTitle>Export Your Insight Brief</CardTitle>
-         </CardHeader>
-         <CardContent>
-           <p className="text-sm text-gray-600">Loading...</p>
-         </CardContent>
-       </Card>
-     </div>
-   }>
-     <ExportsPageContent />
-   </Suspense>
- );
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Export Your Insight Brief</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Loading...</p>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <ExportsPageContent />
+    </Suspense>
+  );
 }

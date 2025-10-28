@@ -1,8 +1,56 @@
 import { FirecrawlClient } from './firecrawl-client'
-import { GroqClient } from './groq-client'
-import { InsightData, PainPoint, Competitor, Opportunity, Persona } from '@/types/insight'
+import { GroqClient, MindMapData } from './groq-client'
+import { InsightData } from '@/types/insight'
 import { z } from 'zod'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+
+type ResearchFinding = Record<string, unknown>
+
+function isObject(value: unknown): value is ResearchFinding {
+  return typeof value === 'object' && value !== null
+}
+
+function getFindingUrl(finding: ResearchFinding): string | undefined {
+  const candidate =
+    (typeof finding.url === 'string' && finding.url) ||
+    (typeof finding.link === 'string' && finding.link)
+  return typeof candidate === 'string' ? candidate : undefined
+}
+
+function getFindingTitle(finding: ResearchFinding): string | undefined {
+  const title = finding.title ?? finding.source ?? finding.name
+  return typeof title === 'string' ? title : undefined
+}
+
+function getFindingSnippet(finding: ResearchFinding): string | undefined {
+  const snippet = finding.snippet ?? finding.description
+  return typeof snippet === 'string' ? snippet : undefined
+}
+
+function getFindingContent(finding: ResearchFinding): string | undefined {
+  const content = finding.content ?? finding.markdown
+  if (typeof content === 'string') {
+    return content
+  }
+  if (Array.isArray(content)) {
+    return content.filter(item => typeof item === 'string').join('\n')
+  }
+  return undefined
+}
+
+function addFinding(target: ResearchFinding[], value: unknown) {
+  if (isObject(value)) {
+    target.push(value)
+  }
+}
+
+function addFindings(target: ResearchFinding[], value: unknown) {
+  if (Array.isArray(value)) {
+    value.forEach(item => addFinding(target, item))
+  } else {
+    addFinding(target, value)
+  }
+}
 
 interface ResearchOptions {
   query: string
@@ -16,9 +64,17 @@ interface ResearchState {
   status: 'pending' | 'running' | 'completed' | 'failed'
   currentStep: string
   progress: number
-  findings: any[]
+  findings: ResearchFinding[]
   insight: InsightData | null
   error?: string
+}
+
+function extractJobId(result: unknown): string {
+  if (isObject(result)) {
+    if (typeof result.jobId === 'string') return result.jobId
+    if (typeof result.id === 'string') return result.id
+  }
+  return 'unknown'
 }
 
 // Zod schema for structured insight generation
@@ -97,7 +153,7 @@ export class ResearchWorkflow {
     this.onProgressUpdate?.(this.state)
     
     if (error) {
-      logger.error(`Research Error at step "${step}":`, error)
+      logger.error(`Research Error at step "${step}"`, error)
     } else {
       logger.debug(`Research Progress: ${step} (${progress}%)`)
     }
@@ -113,15 +169,8 @@ export class ResearchWorkflow {
         limit: 10
       })
       
-      // Add search results to findings
-      if (searchResults && Array.isArray(searchResults)) {
-        this.state.findings.push(...searchResults)
-      } else if (searchResults && typeof searchResults === 'object') {
-        // Handle different response formats
-        const results = (searchResults as any).results || (searchResults as any).data || []
-        if (Array.isArray(results)) {
-          this.state.findings.push(...results)
-        }
+      if (Array.isArray(searchResults?.data)) {
+        addFindings(this.state.findings, searchResults.data)
       }
 
       // Step 2: Scrape competitor URLs if provided
@@ -134,11 +183,11 @@ export class ResearchWorkflow {
             onlyMainContent: true
           })
           
-          if (competitorData.data) {
-            this.state.findings.push(...competitorData.data)
+          if (Array.isArray(competitorData.data)) {
+            addFindings(this.state.findings, competitorData.data)
           }
         } catch (error) {
-          logger.warn('Some competitor URLs failed to scrape:', error)
+          logger.warn('Some competitor URLs failed to scrape', error)
           // Continue with partial data
         }
       }
@@ -158,23 +207,16 @@ export class ResearchWorkflow {
 
       // Extract from top competitor URLs
       const topUrls = this.state.findings
-        .filter(f => f.url && f.url.includes('http'))
+        .map(getFindingUrl)
+        .filter((url): url is string => typeof url === 'string' && url.includes('http'))
         .slice(0, 3)
-        .map(f => f.url)
 
       if (topUrls.length > 0) {
         try {
           const extractedData = await this.firecrawl.extract(topUrls, CompetitorExtractionSchema)
-          if (extractedData && Array.isArray(extractedData)) {
-            this.state.findings.push(...extractedData)
-          } else if (extractedData && typeof extractedData === 'object') {
-            const data = (extractedData as any).data || []
-            if (Array.isArray(data)) {
-              this.state.findings.push(...data)
-            }
-          }
+          addFindings(this.state.findings, extractedData)
         } catch (error) {
-          logger.warn('Structured extraction failed:', error)
+          logger.warn('Structured extraction failed', error)
           // Continue with unstructured data
         }
       }
@@ -194,15 +236,24 @@ export class ResearchWorkflow {
       this.updateProgress('Generating citations...', 90)
       
       const citations = this.state.findings
-        .filter(f => f.url && f.snippet)
+        .map((finding, index) => {
+          const url = getFindingUrl(finding)
+          const snippet = getFindingSnippet(finding)
+          const content = getFindingContent(finding)
+          if (!url || (!snippet && !content)) {
+            return null
+          }
+          return {
+            id: `citation-${index}`,
+            url,
+            title: getFindingTitle(finding) || 'Untitled',
+            snippet: snippet ?? content?.slice(0, 200) ?? 'No snippet available',
+            relevance_score: Math.random() * 0.5 + 0.5,
+          }
+        })
+        .filter((citation): citation is NonNullable<typeof citation> => Boolean(citation))
         .slice(0, 10)
-        .map((f, index) => ({
-          id: `citation-${index}`,
-          url: f.url,
-          title: f.title || 'Untitled',
-          snippet: f.snippet || f.content?.substring(0, 200) || 'No snippet available',
-          relevance_score: Math.random() * 0.5 + 0.5 // Mock relevance score
-        }))
+        .map((citation, index) => ({ ...citation, id: `citation-${index}` }))
 
       // Add citations to insights
       this.state.insight.citations = citations
@@ -211,8 +262,9 @@ export class ResearchWorkflow {
       
       return this.state.insight
 
-    } catch (error: any) {
-      this.updateProgress('Research failed', 0, 'failed', error.message)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Research failed'
+      this.updateProgress('Research failed', 0, 'failed', message)
       throw error
     }
   }
@@ -240,10 +292,11 @@ export class ResearchWorkflow {
       this.updateProgress('Crawl initiated with webhook', 20)
       
       // Return job ID for tracking
-      return (crawlResult as any).jobId || (crawlResult as any).id || 'unknown'
+      return extractJobId(crawlResult)
 
-    } catch (error: any) {
-      this.updateProgress('Async research failed', 0, 'failed', error.message)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Async research failed'
+      this.updateProgress('Async research failed', 0, 'failed', message)
       throw error
     }
   }
@@ -251,7 +304,7 @@ export class ResearchWorkflow {
   /**
    * Convert insights to mind map format
    */
-  async generateMindMap(): Promise<{ nodes: any[], edges: any[] }> {
+  async generateMindMap(): Promise<MindMapData> {
     if (!this.state.insight) {
       throw new Error('No insights available. Run research first.')
     }
@@ -264,8 +317,8 @@ export class ResearchWorkflow {
       this.updateProgress('Mind map generated', 100)
       
       return mindMapData
-    } catch (error: any) {
-      logger.error('Mind map generation failed:', error)
+    } catch (error: unknown) {
+      logger.error('Mind map generation failed', error)
       throw error
     }
   }

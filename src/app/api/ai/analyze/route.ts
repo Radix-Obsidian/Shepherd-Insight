@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AdvancedGroqClient } from '@/lib/research/ai-analyzer'
+import { AdvancedGroqClient, PersonaData } from '@/lib/research/ai-analyzer'
+import { logger } from '@/lib/logger'
+
+type AnalyzeAction =
+  | 'generate-personas'
+  | 'market-sizing'
+  | 'prioritize-features'
+  | 'get-models'
+  | 'validate-output'
+  | string
+
+interface AnalyzeRequestBody {
+  action?: AnalyzeAction
+  data?: unknown
+  query?: string
+  personas?: unknown
+  schema?: unknown
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, data, query, personas } = body
+    const body = (await request.json()) as AnalyzeRequestBody
+    const { action, data, query, personas, schema } = body
 
     if (!action) {
       return NextResponse.json(
@@ -25,7 +42,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
-        result = await aiAnalyzer.generatePersonas(data, query)
+        if (Array.isArray(data)) {
+          result = await aiAnalyzer.generatePersonas(data as unknown[], query)
+        } else {
+          return NextResponse.json(
+            { error: 'Data must be an array for persona generation' },
+            { status: 400 }
+          )
+        }
         break
 
       case 'market-sizing':
@@ -35,7 +59,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
-        result = await aiAnalyzer.performMarketSizing(data, query)
+        if (Array.isArray(data)) {
+          result = await aiAnalyzer.performMarketSizing(data as unknown[], query)
+        } else {
+          return NextResponse.json(
+            { error: 'Data must be an array for market sizing' },
+            { status: 400 }
+          )
+        }
         break
 
       case 'prioritize-features':
@@ -45,7 +76,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
-        result = await aiAnalyzer.prioritizeFeatures(data, personas)
+        if (Array.isArray(data)) {
+          result = await aiAnalyzer.prioritizeFeatures(data as unknown[], personas as PersonaData[])
+        } else {
+          return NextResponse.json(
+            { error: 'Data must be an array for feature prioritization' },
+            { status: 400 }
+          )
+        }
         break
 
       case 'get-models':
@@ -53,7 +91,7 @@ export async function POST(request: NextRequest) {
         break
 
       case 'validate-output':
-        if (!data || !body.schema) {
+        if (!data || !schema) {
           return NextResponse.json(
             { error: 'Data and schema are required for validation' },
             { status: 400 }
@@ -77,13 +115,14 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
 
-  } catch (error: any) {
-    console.error('AI analysis error:', error)
-    
+  } catch (error: unknown) {
+    logger.error('AI analysis error', error)
+    const details = error instanceof Error ? error.message : 'Unknown error'
+
     return NextResponse.json(
-      { 
+      {
         error: 'AI analysis failed',
-        details: error.message 
+        details
       },
       { status: 500 }
     )

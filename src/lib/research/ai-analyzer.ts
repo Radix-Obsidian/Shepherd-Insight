@@ -5,7 +5,7 @@
 
 import { GroqClient } from './groq-client'
 import { z } from 'zod'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
 
 export interface ModelConfig {
   name: string
@@ -113,7 +113,7 @@ export class AdvancedGroqClient extends GroqClient {
   /**
    * Generate personas from research data
    */
-  async generatePersonas(researchData: any[], query: string): Promise<PersonaData[]> {
+  async generatePersonas(researchData: unknown[], query: string): Promise<PersonaData[]> {
     const PersonaSchema = z.array(z.object({
       id: z.string(),
       name: z.string(),
@@ -154,7 +154,7 @@ Make the personas realistic and based on the research data provided.`
   /**
    * Perform market sizing analysis
    */
-  async performMarketSizing(researchData: any[], query: string): Promise<MarketSizingData> {
+  async performMarketSizing(researchData: unknown[], query: string): Promise<MarketSizingData> {
     const MarketSizingSchema = z.object({
       total_addressable_market: z.string(),
       serviceable_addressable_market: z.string(),
@@ -190,7 +190,10 @@ Use realistic estimates based on the research data and industry standards.`
   /**
    * Prioritize features based on research
    */
-  async prioritizeFeatures(researchData: any[], personas: PersonaData[]): Promise<FeaturePrioritizationData> {
+  async prioritizeFeatures(
+    researchData: unknown[],
+    personas: PersonaData[]
+  ): Promise<FeaturePrioritizationData> {
     const FeaturePrioritizationSchema = z.object({
       features: z.array(z.object({
         name: z.string(),
@@ -245,9 +248,9 @@ Focus on features that address the pain points identified in the research and pe
    * Validate structured output against schema
    */
   async validateStructuredOutput<T>(
-    data: any,
+    data: unknown,
     schema: z.ZodSchema<T>,
-    context?: string
+    _context?: string
   ): Promise<{ isValid: boolean; errors: string[]; validatedData?: T }> {
     try {
       const validatedData = schema.parse(data)
@@ -295,7 +298,11 @@ Focus on features that address the pain points identified in the research and pe
   /**
    * Attempt to fix common data issues
    */
-  private async attemptDataFix(data: any, schema: z.ZodSchema<any>, errors: string[]): Promise<any> {
+  private async attemptDataFix(
+    data: unknown,
+    schema: z.ZodSchema<unknown>,
+    errors: string[]
+  ): Promise<unknown> {
     const prompt = `Fix these data validation errors:
 
 Data:
@@ -320,7 +327,7 @@ Return the corrected data in the same format.`
         return JSON.parse(jsonMatch[0])
       }
     } catch (error) {
-      logger.warn('Failed to fix data:', error)
+      logger.warn('Failed to fix data', error)
     }
 
     return null

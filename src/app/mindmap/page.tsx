@@ -1,6 +1,5 @@
 'use client'
 
-import { logger } from '@/lib/logger';
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ReactFlowProvider } from 'reactflow'
@@ -18,7 +17,7 @@ function MindMapPageContent() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
   const canvasRef = useRef<HTMLDivElement>(null)
   
-  const { loadFromLocalStorage, reset, nodes, edges } = useMindMapStore()
+  const { loadFromLocalStorage, reset } = useMindMapStore()
 
   // Load mind map data on mount
   useEffect(() => {
@@ -30,11 +29,6 @@ function MindMapPageContent() {
   const handleReset = () => {
     reset()
     setIsResetModalOpen(false)
-  }
-
-  const handleExport = (type: 'image' | 'pdf' | 'presentation') => {
-    // TODO: Implement export functionality
-    logger.debug(`Export as ${type}`)
   }
 
   return (

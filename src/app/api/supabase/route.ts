@@ -1,6 +1,22 @@
 import { supabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+
+type SupabasePostAction =
+  | 'create-project'
+  | 'create-version'
+  | 'update-version'
+  | 'update-project'
+
+interface SupabasePostBody {
+  action?: SupabasePostAction
+  name?: string
+  projectId?: string
+  versionData?: Record<string, unknown>
+  versionId?: string
+  updates?: Record<string, unknown>
+  id?: string
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,10 +84,11 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
-  } catch (error: any) {
-    logger.error('Supabase GET error:', error)
+  } catch (error: unknown) {
+    logger.error('Supabase GET error', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -79,12 +96,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { action, ...data } = body
+    const body = (await request.json()) as SupabasePostBody
+    const { action } = body
 
     switch (action) {
       case 'create-project': {
-        const { name } = data
+        const { name } = body
         if (!name) {
           return NextResponse.json({ error: 'Project name required' }, { status: 400 })
         }
@@ -101,7 +118,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'create-version': {
-        const { projectId, versionData } = data
+        const { projectId, versionData } = body
         if (!projectId || !versionData) {
           return NextResponse.json({ error: 'Project ID and version data required' }, { status: 400 })
         }
@@ -116,7 +133,8 @@ export async function POST(request: NextRequest) {
 
         if (versionError) throw versionError
 
-        const nextVersionNumber = versions && versions.length > 0 ? versions[0].version_number + 1 : 1
+        const nextVersionNumber =
+          versions && versions.length > 0 ? (versions[0]?.version_number ?? 0) + 1 : 1
 
         const { data: version, error } = await supabase
           .from('versions')
@@ -134,7 +152,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'update-version': {
-        const { versionId, updates } = data
+        const { versionId, updates } = body
         if (!versionId || !updates) {
           return NextResponse.json({ error: 'Version ID and updates required' }, { status: 400 })
         }
@@ -152,7 +170,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'update-project': {
-        const { id, updates } = data
+        const { id, updates } = body
         if (!id || !updates) {
           return NextResponse.json({ error: 'Project ID and updates required' }, { status: 400 })
         }
@@ -172,10 +190,11 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
-  } catch (error: any) {
-    logger.error('Supabase POST error:', error)
+  } catch (error: unknown) {
+    logger.error('Supabase POST error', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -218,10 +237,11 @@ export async function DELETE(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
-  } catch (error: any) {
-    logger.error('Supabase DELETE error:', error)
+  } catch (error: unknown) {
+    logger.error('Supabase DELETE error', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }

@@ -4,7 +4,6 @@ import { useCallback, useMemo } from 'react'
 import ReactFlow, {
   Node,
   Edge,
-  addEdge,
   Connection,
   useNodesState,
   useEdgesState,
@@ -30,9 +29,6 @@ export function MindMapBuilder() {
     nodes: storeNodes, 
     edges: storeEdges, 
     addEdge: addEdgeToStore,
-    updateNode,
-    deleteNode,
-    deleteEdge,
     setSelectedNode 
   } = useMindMapStore()
 

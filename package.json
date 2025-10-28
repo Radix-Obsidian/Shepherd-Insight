@@ -19,6 +19,9 @@
     "cypress:run": "cypress run",
     "test:e2e": "cypress run",
     "test:e2e:headed": "cypress open",
+    "test:e2e:production": "CYPRESS_BASE_URL=https://shepherd-insight.vercel.app cypress run",
+    "test:e2e:preview": "cypress run --config baseUrl=$CYPRESS_BASE_URL",
+    "test:e2e:cloud": "cypress run --config baseUrl=$CYPRESS_BASE_URL",
     "setup:supabase": "./scripts/setup-env.sh",
     "deploy:functions": "supabase functions deploy env-config --project-ref jiecqmnygnqrfntqoqsg",
     "deploy:db": "supabase db push"

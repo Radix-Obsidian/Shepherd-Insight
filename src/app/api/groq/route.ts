@@ -1,11 +1,11 @@
-'use server';
+'use server'
 
-import { logger } from '@/lib/logger';
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { GroqClient } from '@/lib/research/groq-client';
+import { logger } from '@/lib/logger'
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { GroqClient } from '@/lib/research/groq-client'
 
-const groq = new GroqClient({ temperature: 0.2 });
+const groq = new GroqClient({ temperature: 0.2 })
 
 const AnalysisSchema = z.object({
   summary: z.string(),
@@ -18,7 +18,7 @@ const AnalysisSchema = z.object({
     operational: z.string(),
     competitive: z.string(),
   }),
-});
+})
 
 const InsightSchema = z.object({
   keyInsights: z.array(z.string()).min(3),
@@ -32,7 +32,7 @@ const InsightSchema = z.object({
     pricing: z.string(),
     acquisition: z.string(),
   }),
-});
+})
 
 const EnhancedFeatureSchema = z.object({
   enhancedFeatures: z.array(
@@ -44,35 +44,47 @@ const EnhancedFeatureSchema = z.object({
     })
   ),
   enhancementStrategy: z.string(),
-});
+})
 
-type NormalizedProject = ReturnType<typeof normalizeProjectData>;
+type NormalizedProject = ReturnType<typeof normalizeProjectData>
+type GroqAction = 'analyze-project' | 'generate-insights' | 'enhance-features'
+
+interface GroqRequestBody {
+  action?: GroqAction
+  projectData?: Record<string, unknown>
+}
 
 function normalizeList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.map(item => String(item).trim()).filter(Boolean);
+    return value.map(item => String(item).trim()).filter(Boolean)
   }
   if (typeof value === 'string') {
     return value
       .split('\n')
       .map(item => item.trim())
-      .filter(Boolean);
+      .filter(Boolean)
   }
-  return [];
+  return []
 }
 
-function normalizeProjectData(input: Record<string, any>) {
+function toStringValue(value: unknown): string {
+  return typeof value === 'string' ? value : value != null ? String(value) : ''
+}
+
+function normalizeProjectData(input: Record<string, unknown>) {
   return {
-    name: input.name ?? '',
-    audience: input.audience ?? '',
-    problem: input.problem ?? '',
-    whyCurrentFails: input.whyCurrentFails ?? input.why_current_fails ?? '',
-    promise: input.promise ?? '',
-    mustHaves: normalizeList(input.mustHaves ?? input.must_haves),
-    notNow: normalizeList(input.notNow ?? input.not_now),
-    constraints: input.constraints ?? '',
-    positioning: input.positioning ?? '',
-  };
+    name: toStringValue(input['name']),
+    audience: toStringValue(input['audience']),
+    problem: toStringValue(input['problem']),
+    whyCurrentFails: toStringValue(
+      input['whyCurrentFails'] ?? input['why_current_fails']
+    ),
+    promise: toStringValue(input['promise']),
+    mustHaves: normalizeList(input['mustHaves'] ?? input['must_haves']),
+    notNow: normalizeList(input['notNow'] ?? input['not_now']),
+    constraints: toStringValue(input['constraints']),
+    positioning: toStringValue(input['positioning']),
+  }
 }
 
 function buildProjectContext(project: NormalizedProject) {
@@ -86,25 +98,25 @@ Must Have Features: ${project.mustHaves.length ? project.mustHaves.join('; ') : 
 Out of Scope Features: ${project.notNow.length ? project.notNow.join('; ') : 'None provided'}
 Constraints: ${project.constraints || 'Not provided'}
 Positioning Statement: ${project.positioning || 'Not provided'}
-`.trim();
+`.trim()
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { action, projectData } = body;
+    const body = (await request.json()) as GroqRequestBody
+    const { action, projectData } = body
 
     if (!action) {
-      return NextResponse.json({ error: 'action is required' }, { status: 400 });
+      return NextResponse.json({ error: 'action is required' }, { status: 400 })
     }
 
     if (!projectData || typeof projectData !== 'object') {
-      return NextResponse.json({ error: 'projectData is required' }, { status: 400 });
+      return NextResponse.json({ error: 'projectData is required' }, { status: 400 })
     }
 
-    const project = normalizeProjectData(projectData);
+    const project = normalizeProjectData(projectData)
 
-    const context = buildProjectContext(project);
+    const context = buildProjectContext(project)
 
     switch (action) {
       case 'analyze-project': {
@@ -117,11 +129,11 @@ Focus on actionable insight for a founding team. Keep answers concise but specif
 `;
         const analysis = await groq.structuredOutputWithFallback(prompt, AnalysisSchema, {
           temperature: 0.25,
-        });
+        })
         return NextResponse.json({
           analysis,
           timestamp: new Date().toISOString(),
-        });
+        })
       }
 
       case 'generate-insights': {
@@ -134,11 +146,11 @@ Return JSON that follows the schema. Each list should contain specific, non-gene
 `;
         const insights = await groq.structuredOutputWithFallback(prompt, InsightSchema, {
           temperature: 0.2,
-        });
+        })
         return NextResponse.json({
           insights,
           generatedAt: new Date().toISOString(),
-        });
+        })
       }
 
       case 'enhance-features': {
@@ -146,7 +158,7 @@ Return JSON that follows the schema. Each list should contain specific, non-gene
           return NextResponse.json(
             { error: 'Project must include at least one must-have feature.' },
             { status: 400 }
-          );
+          )
         }
 
         const prompt = `
@@ -158,27 +170,28 @@ Return JSON adhering to the schema. For priority, assign "High" to core MVP diff
 `;
         const enhanced = await groq.structuredOutputWithFallback(prompt, EnhancedFeatureSchema, {
           temperature: 0.3,
-        });
+        })
         return NextResponse.json({
           ...enhanced,
           timestamp: new Date().toISOString(),
-        });
+        })
       }
 
       default:
         return NextResponse.json(
           { error: `Unsupported action "${action}"` },
           { status: 400 }
-        );
+        )
     }
-  } catch (error: any) {
-    logger.error('Groq route error:', error);
+  } catch (error: unknown) {
+    logger.error('Groq route error', error)
+    const details = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       {
         error: 'Groq processing failed',
-        details: error?.message ?? 'Unknown error',
+        details,
       },
       { status: 500 }
-    );
+    )
   }
 }

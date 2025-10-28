@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { MindMapNode, MindMapEdge, NODE_COLORS } from '@/lib/mindmap/types'
 import { GroqClient } from '@/lib/research/groq-client'
 import { z } from 'zod'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+
+interface MindMapRequestBody {
+  text?: string
+  image?: string
+  insights?: unknown
+}
 
 // Schema for AI-generated mind map structure
 const MindMapSchema = z.object({
@@ -27,7 +33,7 @@ const MindMapSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, image, insights } = await request.json()
+    const { text, image, insights } = (await request.json()) as MindMapRequestBody
 
     if (!text && !image && !insights) {
       return NextResponse.json(
@@ -100,7 +106,7 @@ Return a JSON structure with nodes and edges arrays.`
     })
 
     // Convert AI response to ReactFlow format
-    const nodes: MindMapNode[] = aiResponse.nodes.map((node, index) => ({
+    const nodes: MindMapNode[] = aiResponse.nodes.map(node => ({
       id: node.id,
       type: node.type,
       label: node.label,
@@ -114,7 +120,7 @@ Return a JSON structure with nodes and edges arrays.`
       }
     }))
 
-    const edges: MindMapEdge[] = aiResponse.edges.map((edge, index) => ({
+    const edges: MindMapEdge[] = aiResponse.edges.map(edge => ({
       id: edge.id,
       source: edge.source,
       target: edge.target,
@@ -133,8 +139,10 @@ Return a JSON structure with nodes and edges arrays.`
       source: insights ? 'insights' : text ? 'text' : 'image'
     })
 
-  } catch (error: any) {
-    logger.error('Mind map generation error:', error)
+  } catch (error: unknown) {
+    logger.error('Mind map generation error', error)
+    const message =
+      error instanceof Error ? error.message : 'Unable to generate mind map'
     
     // Fallback to mock data if AI generation fails
     const fallbackNodes: MindMapNode[] = [
@@ -196,7 +204,7 @@ Return a JSON structure with nodes and edges arrays.`
     return NextResponse.json({
       nodes: fallbackNodes,
       edges: fallbackEdges,
-      error: error.message,
+      error: message,
       fallback: true
     })
   }
@@ -205,7 +213,7 @@ Return a JSON structure with nodes and edges arrays.`
 /**
  * Optimize node layout for better visualization
  */
-function optimizeLayout(nodes: MindMapNode[], edges: MindMapEdge[]): MindMapNode[] {
+function optimizeLayout(nodes: MindMapNode[], _edges: MindMapEdge[]): MindMapNode[] {
   // Simple layout optimization - spread nodes in a circle
   const centerX = 0
   const centerY = 0

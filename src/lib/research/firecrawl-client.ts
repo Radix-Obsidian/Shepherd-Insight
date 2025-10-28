@@ -1,14 +1,40 @@
 import FirecrawlApp from '@mendable/firecrawl-js'
 import { z } from 'zod'
 import { getApiKey } from '@/lib/api-key-manager'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+
+export interface FirecrawlSearchItem {
+  url?: string
+  link?: string
+  title?: string
+  source?: string
+  description?: string
+  snippet?: string
+  content?: string
+}
+
+export interface FirecrawlSearchResponse {
+  data?: FirecrawlSearchItem[]
+}
+
+export interface FirecrawlScrapeData {
+  title?: string
+  content?: string | string[]
+  markdown?: string
+}
+
+export interface FirecrawlScrapeResponse {
+  data?: FirecrawlScrapeData
+}
 
 export interface SearchOptions {
   limit?: number
 }
 
+export type FirecrawlFormat = 'html' | 'markdown' | 'rawHtml' | 'screenshot'
+
 export interface ScrapeOptions {
-  formats?: string[]
+  formats?: FirecrawlFormat[]
   includeRawHtml?: boolean
   onlyMainContent?: boolean
 }
@@ -23,7 +49,7 @@ export interface CrawlOptions {
   webhook?: {
     url: string
     events?: string[]
-    metadata?: Record<string, any>
+    metadata?: Record<string, string>
   }
 }
 
@@ -45,7 +71,7 @@ export class FirecrawlClient {
    * Search the web using Firecrawl's search API
    * Official docs: https://docs.firecrawl.dev/features/search
    */
-  async search(query: string, options: SearchOptions = {}) {
+  async search(query: string, options: SearchOptions = {}): Promise<FirecrawlSearchResponse> {
     try {
       await this.initializeApp()
       const { limit = 5 } = options
@@ -54,7 +80,7 @@ export class FirecrawlClient {
         limit,
       })
 
-      return result
+      return result as FirecrawlSearchResponse
     } catch (error) {
       logger.error('Firecrawl search error:', error)
       throw new Error(`Search failed: ${error}`)
@@ -65,7 +91,7 @@ export class FirecrawlClient {
    * Scrape a single URL using Firecrawl's scrape API
    * Official docs: https://docs.firecrawl.dev/features/scrape
    */
-  async scrapeUrl(url: string, options: ScrapeOptions = {}) {
+  async scrapeUrl(url: string, options: ScrapeOptions = {}): Promise<FirecrawlScrapeResponse> {
     try {
       await this.initializeApp()
       const { 
@@ -75,12 +101,12 @@ export class FirecrawlClient {
       } = options
 
       const result = await this.app!.scrape(url, {
-        formats: formats as any,
+        formats: formats as FirecrawlFormat[] & string[],
         includeRawHtml,
         onlyMainContent,
       })
       
-      return result
+      return result as FirecrawlScrapeResponse
     } catch (error) {
       logger.error('Firecrawl scrape error:', error)
       throw new Error(`Scrape failed: ${error}`)
@@ -91,7 +117,10 @@ export class FirecrawlClient {
    * Batch scrape multiple URLs efficiently
    * Official docs: https://docs.firecrawl.dev/features/batch-scrape
    */
-  async batchScrapeUrls(urls: string[], options: ScrapeOptions = {}) {
+  async batchScrapeUrls(
+    urls: string[],
+    options: ScrapeOptions = {}
+  ): Promise<{ data: FirecrawlScrapeResponse[] }> {
     try {
       await this.initializeApp()
       const { 
@@ -101,7 +130,7 @@ export class FirecrawlClient {
       } = options
 
       // Use individual scrape calls for now to avoid type issues
-      const results = []
+      const results: FirecrawlScrapeResponse[] = []
       for (const url of urls) {
         try {
           const result = await this.scrapeUrl(url, { formats, includeRawHtml, onlyMainContent })
@@ -122,10 +151,13 @@ export class FirecrawlClient {
    * Extract structured data from URLs using LLM
    * Official docs: https://docs.firecrawl.dev/features/extract
    */
-  async extract(urls: string[], schema: z.ZodSchema<any>, options: ExtractOptions = {}) {
+  async extract(
+    urls: string[],
+    schema: z.ZodSchema<unknown>,
+    _options: ExtractOptions = {}
+  ): Promise<unknown> {
     try {
       await this.initializeApp()
-      const { formats = ['markdown'] } = options
 
       const result = await this.app!.extract({
         urls,
@@ -143,7 +175,7 @@ export class FirecrawlClient {
    * Deep crawl a website with optional webhook support
    * Official docs: https://docs.firecrawl.dev/features/crawl
    */
-  async crawl(url: string, options: CrawlOptions = {}) {
+  async crawl(url: string, options: CrawlOptions = {}): Promise<unknown> {
     try {
       await this.initializeApp()
       const { 
@@ -152,21 +184,20 @@ export class FirecrawlClient {
         webhook 
       } = options
 
-      const crawlConfig: any = {
+      const scrapeOpts = {
+        formats: (scrapeOptions?.formats || ['markdown']) as FirecrawlFormat[] & string[],
+        onlyMainContent: true,
+        ...scrapeOptions
+      }
+
+      const crawlConfig = {
         limit,
-        scrapeOptions: {
-          formats: ['markdown'] as any,
-          onlyMainContent: true,
-          ...scrapeOptions
-        }
+        scrapeOptions: scrapeOpts,
+        ...(webhook && { webhook })
       }
 
-      // Add webhook if provided
-      if (webhook) {
-        crawlConfig.webhook = webhook
-      }
-
-      const result = await this.app!.crawl(url, crawlConfig)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await this.app!.crawl(url, crawlConfig as any)
 
       return result
     } catch (error) {
@@ -179,7 +210,7 @@ export class FirecrawlClient {
    * Get crawl status by crawl ID
    * Official docs: https://docs.firecrawl.dev/features/crawl
    */
-  async getCrawlStatus(crawlId: string) {
+  async getCrawlStatus(crawlId: string): Promise<unknown> {
     try {
       await this.initializeApp()
       const result = await this.app!.getCrawlStatus(crawlId)
@@ -194,7 +225,7 @@ export class FirecrawlClient {
    * Generate a sitemap for a website
    * Official docs: https://docs.firecrawl.dev/features/map
    */
-  async generateMap(url: string, options: { limit?: number } = {}) {
+  async generateMap(url: string, options: { limit?: number } = {}): Promise<unknown> {
     try {
       await this.initializeApp()
       const { limit = 100 } = options

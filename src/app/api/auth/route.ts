@@ -1,7 +1,15 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { NextRequest, NextResponse } from 'next/server'
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+
+type AuthAction = 'signup' | 'signin' | 'signout' | 'session'
+
+interface AuthRequestBody {
+  action?: AuthAction
+  email?: string
+  password?: string
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,12 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient()
-    const body = await request.json()
-    const { action, ...data } = body
+    const body = (await request.json()) as AuthRequestBody
+    const { action, email, password } = body
 
     switch (action) {
       case 'signup': {
-        const { email, password } = data
         if (!email || !password) {
           return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
         }
@@ -37,7 +44,6 @@ export async function POST(request: NextRequest) {
       }
 
       case 'signin': {
-        const { email, password } = data
         if (!email || !password) {
           return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
         }
@@ -74,10 +80,11 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
-  } catch (error: any) {
-    logger.error('Auth error:', error)
+  } catch (error: unknown) {
+    logger.error('Auth error', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -116,10 +123,11 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
-  } catch (error: any) {
-    logger.error('Auth GET error:', error)
+  } catch (error: unknown) {
+    logger.error('Auth GET error', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }

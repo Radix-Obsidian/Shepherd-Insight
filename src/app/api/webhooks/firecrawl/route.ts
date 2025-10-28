@@ -5,6 +5,57 @@ import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
 
+interface FirecrawlEventData {
+  jobId: string
+  url?: string
+  error?: string
+  [key: string]: unknown
+}
+
+interface FirecrawlEvent {
+  type: string
+  data: FirecrawlEventData
+}
+
+interface InsightJobRecord {
+  id: string
+  job_id: string
+  query: string | null
+  project_id: string | null
+  user_id: string
+}
+
+interface UserProfile {
+  email: string
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isFirecrawlEvent(value: unknown): value is FirecrawlEvent {
+  if (!isRecord(value)) return false
+  const { type, data } = value
+  if (typeof type !== 'string' || !isRecord(data)) {
+    return false
+  }
+  return typeof data.jobId === 'string'
+}
+
+function isInsightJobRecord(value: unknown): value is InsightJobRecord {
+  if (!isRecord(value)) return false
+  return (
+    typeof value.id === 'string' &&
+    typeof value.job_id === 'string' &&
+    'user_id' in value &&
+    typeof value.user_id === 'string'
+  )
+}
+
+function isUserProfile(value: unknown): value is UserProfile {
+  return isRecord(value) && typeof value.email === 'string'
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify webhook signature
@@ -20,9 +71,15 @@ export async function POST(request: NextRequest) {
     const body = await request.text()
     
     // Extract hash from signature header
-    const [algorithm, hash] = signature.split('=')
-    if (algorithm !== 'sha256') {
-      logger.error('Invalid signature algorithm:', algorithm)
+    const signatureParts = signature.split('=')
+    if (signatureParts.length !== 2) {
+      logger.error('Invalid signature header format')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    const [algorithm, hash] = signatureParts
+    if (algorithm !== 'sha256' || !hash) {
+      logger.error('Invalid signature algorithm', algorithm)
       return NextResponse.json({ error: 'Invalid signature algorithm' }, { status: 401 })
     }
 
@@ -39,8 +96,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse verified webhook payload
-    const event = JSON.parse(body)
-    logger.debug('Verified Firecrawl webhook:', event)
+    const parsedEvent = JSON.parse(body) as unknown
+    if (!isFirecrawlEvent(parsedEvent)) {
+      logger.error('Invalid webhook payload structure')
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    const event = parsedEvent
+    logger.debug('Verified Firecrawl webhook', event)
 
     // Handle different event types
     switch (event.type) {
@@ -91,8 +154,8 @@ export async function POST(request: NextRequest) {
     // Always respond with 200 to acknowledge receipt
     return NextResponse.json({ received: true })
 
-  } catch (error: any) {
-    logger.error('Webhook processing error:', error)
+  } catch (error: unknown) {
+    logger.error('Webhook processing error', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -100,8 +163,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCrawlStarted(event: any) {
-  logger.debug('Crawl started:', event.data.jobId)
+async function handleCrawlStarted(event: FirecrawlEvent) {
+  logger.debug('Crawl started', event.data.jobId)
   
   // Update job status in Supabase
   try {
@@ -115,12 +178,12 @@ async function handleCrawlStarted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update crawl started status:', error)
+    logger.error('Failed to update crawl started status', error)
   }
 }
 
-async function handleCrawlPage(event: any) {
-  logger.debug('Crawl page completed:', event.data.url)
+async function handleCrawlPage(event: FirecrawlEvent) {
+  logger.debug('Crawl page completed', event.data.url)
   
   // Update progress for each page crawled
   try {
@@ -132,12 +195,12 @@ async function handleCrawlPage(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update crawl page status:', error)
+    logger.error('Failed to update crawl page status', error)
   }
 }
 
-async function handleCrawlCompleted(event: any) {
-  logger.debug('Crawl completed:', event.data.jobId)
+async function handleCrawlCompleted(event: FirecrawlEvent) {
+  logger.debug('Crawl completed', event.data.jobId)
   
   try {
     // Get job details
@@ -147,8 +210,8 @@ async function handleCrawlCompleted(event: any) {
       .eq('job_id', event.data.jobId)
       .single()
 
-    if (jobError || !job) {
-      logger.error('Failed to fetch job:', jobError)
+    if (jobError || !isInsightJobRecord(job)) {
+      logger.error('Failed to fetch job', jobError)
       return
     }
 
@@ -170,12 +233,12 @@ async function handleCrawlCompleted(event: any) {
     await sendCompletionNotification(job, 'crawl')
     
   } catch (error) {
-    logger.error('Failed to handle crawl completion:', error)
+    logger.error('Failed to handle crawl completion', error)
   }
 }
 
-async function handleCrawlFailed(event: any) {
-  logger.debug('Crawl failed:', event.data.jobId, event.data.error)
+async function handleCrawlFailed(event: FirecrawlEvent) {
+  logger.debug('Crawl failed', event.data.jobId, event.data.error)
   
   try {
     await supabase
@@ -188,12 +251,12 @@ async function handleCrawlFailed(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update crawl failed status:', error)
+    logger.error('Failed to update crawl failed status', error)
   }
 }
 
-async function handleBatchStarted(event: any) {
-  logger.debug('Batch scrape started:', event.data.jobId)
+async function handleBatchStarted(event: FirecrawlEvent) {
+  logger.debug('Batch scrape started', event.data.jobId)
   
   try {
     await supabase
@@ -206,12 +269,12 @@ async function handleBatchStarted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update batch started status:', error)
+    logger.error('Failed to update batch started status', error)
   }
 }
 
-async function handleBatchPage(event: any) {
-  logger.debug('Batch page completed:', event.data.url)
+async function handleBatchPage(event: FirecrawlEvent) {
+  logger.debug('Batch page completed', event.data.url)
   
   try {
     await supabase
@@ -222,12 +285,12 @@ async function handleBatchPage(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update batch page status:', error)
+    logger.error('Failed to update batch page status', error)
   }
 }
 
-async function handleBatchCompleted(event: any) {
-  logger.debug('Batch scrape completed:', event.data.jobId)
+async function handleBatchCompleted(event: FirecrawlEvent) {
+  logger.debug('Batch scrape completed', event.data.jobId)
   
   try {
     await supabase
@@ -240,12 +303,12 @@ async function handleBatchCompleted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update batch completed status:', error)
+    logger.error('Failed to update batch completed status', error)
   }
 }
 
-async function handleExtractStarted(event: any) {
-  logger.debug('Extract started:', event.data.jobId)
+async function handleExtractStarted(event: FirecrawlEvent) {
+  logger.debug('Extract started', event.data.jobId)
   
   try {
     await supabase
@@ -258,12 +321,12 @@ async function handleExtractStarted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update extract started status:', error)
+    logger.error('Failed to update extract started status', error)
   }
 }
 
-async function handleExtractCompleted(event: any) {
-  logger.debug('Extract completed:', event.data.jobId)
+async function handleExtractCompleted(event: FirecrawlEvent) {
+  logger.debug('Extract completed', event.data.jobId)
   
   try {
     await supabase
@@ -276,12 +339,12 @@ async function handleExtractCompleted(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update extract completed status:', error)
+    logger.error('Failed to update extract completed status', error)
   }
 }
 
-async function handleExtractFailed(event: any) {
-  logger.debug('Extract failed:', event.data.jobId, event.data.error)
+async function handleExtractFailed(event: FirecrawlEvent) {
+  logger.debug('Extract failed', event.data.jobId, event.data.error)
   
   try {
     await supabase
@@ -294,16 +357,16 @@ async function handleExtractFailed(event: any) {
       })
       .eq('job_id', event.data.jobId)
   } catch (error) {
-    logger.error('Failed to update extract failed status:', error)
+    logger.error('Failed to update extract failed status', error)
   }
 }
 
 /**
  * Trigger insight generation from crawl data
  */
-async function triggerInsightGeneration(job: any, crawlData: any) {
+async function triggerInsightGeneration(job: InsightJobRecord, crawlData: FirecrawlEventData) {
   try {
-    logger.debug('Triggering insight generation for job:', job.id)
+    logger.debug('Triggering insight generation for job', job.id)
 
     // Call the research API to generate insights
     const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/research/run`, {
@@ -326,10 +389,10 @@ async function triggerInsightGeneration(job: any, crawlData: any) {
     }
 
     const result = await response.json()
-    logger.debug('Insight generation triggered successfully:', result)
+    logger.debug('Insight generation triggered successfully', result)
 
   } catch (error) {
-    logger.error('Failed to trigger insight generation:', error)
+    logger.error('Failed to trigger insight generation', error)
     
     // Update job with error
     await supabase
@@ -347,7 +410,7 @@ async function triggerInsightGeneration(job: any, crawlData: any) {
 /**
  * Send completion notification
  */
-async function sendCompletionNotification(job: any, type: 'crawl' | 'extract' | 'batch') {
+async function sendCompletionNotification(job: InsightJobRecord, type: 'crawl' | 'extract' | 'batch') {
   try {
     // Get user email
     const { data: user, error: userError } = await supabase
@@ -356,8 +419,8 @@ async function sendCompletionNotification(job: any, type: 'crawl' | 'extract' | 
       .eq('id', job.user_id)
       .single()
 
-    if (userError || !user) {
-      logger.error('Failed to fetch user:', userError)
+    if (userError || !isUserProfile(user)) {
+      logger.error('Failed to fetch user', userError)
       return
     }
 
@@ -382,12 +445,12 @@ async function sendCompletionNotification(job: any, type: 'crawl' | 'extract' | 
     })
 
     if (!notificationResponse.ok) {
-      logger.error('Failed to send notification:', await notificationResponse.text())
+      logger.error('Failed to send notification', await notificationResponse.text())
     } else {
       logger.debug('Notification sent successfully')
     }
 
   } catch (error) {
-    logger.error('Failed to send completion notification:', error)
+    logger.error('Failed to send completion notification', error)
   }
 }

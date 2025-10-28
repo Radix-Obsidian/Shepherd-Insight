@@ -1,6 +1,6 @@
 'use client'
 
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,13 +24,35 @@ import {
 interface ResearchPanelProps {
   isOpen: boolean
   onClose: () => void
-  onComplete?: (data: any) => void
+  onComplete?: (data: ResearchResult) => void
 }
 
 interface ResearchStep {
   name: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   progress: number
+}
+
+interface ResearchPainPoint {
+  description: string
+  [key: string]: unknown
+}
+
+interface ResearchInsightData {
+  pain_points?: ResearchPainPoint[]
+  MVP_features?: string[]
+}
+
+interface ResearchCitation {
+  url: string
+  title?: string
+}
+
+interface ResearchResult {
+  mindmapJson?: unknown
+  insightData?: ResearchInsightData
+  citations?: ResearchCitation[]
+  [key: string]: unknown
 }
 
 export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProps) {
@@ -42,7 +64,7 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
   const [steps, setSteps] = useState<ResearchStep[]>([])
   const [currentStep, setCurrentStep] = useState<ResearchStep | null>(null)
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<ResearchResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleStartResearch = async () => {
@@ -83,7 +105,7 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
         throw new Error('Research failed')
       }
 
-      const data = await response.json()
+      const data = (await response.json()) as ResearchResult
       setResult(data)
       setProgress(100)
       
@@ -91,11 +113,10 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
       setSteps(prev => prev.map(step => ({ ...step, status: 'completed', progress: 100 })))
       setCurrentStep(null)
 
-      if (onComplete) {
-        onComplete(data)
-      }
-    } catch (error: any) {
-      setError(error.message)
+      onComplete?.(data)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Research failed'
+      setError(message)
       setSteps(prev => prev.map(step => ({ 
         ...step, 
         status: step.status === 'running' ? 'failed' : step.status 
@@ -108,7 +129,7 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
   const handleViewMindMap = () => {
     if (result?.mindmapJson) {
       // TODO: Open mind map with generated data
-      logger.debug('Opening mind map with data:', result.mindmapJson)
+      logger.debug('Opening mind map with data', result.mindmapJson)
     }
   }
 
@@ -249,7 +270,7 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-1">
-                        {result.insightData.pain_points?.slice(0, 3).map((pain: any, index: number) => (
+                        {result.insightData.pain_points?.slice(0, 3).map((pain: ResearchPainPoint, index: number) => (
                           <div key={index} className="text-sm text-muted-foreground">
                             • {pain.description}
                           </div>
@@ -282,7 +303,7 @@ export function ResearchPanel({ isOpen, onClose, onComplete }: ResearchPanelProp
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {result.citations.slice(0, 5).map((citation: any, index: number) => (
+                      {result.citations.slice(0, 5).map((citation: ResearchCitation, index: number) => (
                         <div key={index} className="flex items-center gap-2 text-sm">
                           <ExternalLink className="h-3 w-3" />
                           <a 

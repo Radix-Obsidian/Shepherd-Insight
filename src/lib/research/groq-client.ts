@@ -2,7 +2,7 @@ import { ChatGroq } from '@langchain/groq'
 import { HumanMessage, SystemMessage } from '@langchain/core/messages'
 import { z } from 'zod'
 import { getApiKey } from '@/lib/api-key-manager'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
 
 export interface GroqOptions {
   model?: string
@@ -53,6 +53,21 @@ export const AVAILABLE_MODELS = {
     description: 'Llama 3.1 8B - Instant responses for basic tasks',
     contextWindow: 131072
   }
+}
+
+export interface MindMapData {
+  nodes: unknown[]
+  edges: unknown[]
+  rawResponse?: string
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isMindMapData(value: unknown): value is MindMapData {
+  if (!isRecord(value)) return false
+  return Array.isArray(value.nodes) && Array.isArray(value.edges)
 }
 
 export class GroqClient {
@@ -110,7 +125,7 @@ export class GroqClient {
       const response = await this.llm.invoke(langchainMessages)
       return response.content
     } catch (error) {
-      logger.error('Groq chat error:', error)
+      logger.error('Groq chat error', error)
       throw new Error(`Chat completion failed: ${error}`)
     }
   }
@@ -148,7 +163,7 @@ export class GroqClient {
 
       return response as T
     } catch (error) {
-      logger.error('Groq structured output error:', error)
+      logger.error('Groq structured output error', error)
       throw new Error(`Structured output failed: ${error}`)
     }
   }
@@ -172,8 +187,9 @@ export class GroqClient {
       try {
         logger.debug(`Attempting structured output with model: ${model}`)
         return await this.structuredOutput(prompt, schema, { ...options, model })
-      } catch (error: any) {
-        logger.warn(`Model ${model} failed, trying next model:`, error.message)
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        logger.warn(`Model ${model} failed, trying next model`, message)
         if (model === models[models.length - 1]) {
           throw error // Rethrow on last attempt
         }
@@ -186,7 +202,7 @@ export class GroqClient {
   /**
    * Analyze research data and generate insights
    */
-  async analyzeResearch(data: any[], query: string) {
+  async analyzeResearch(data: unknown[], query: string) {
     try {
       const prompt = `
         Analyze the following research data and generate comprehensive insights for the query: "${query}"
@@ -210,7 +226,7 @@ export class GroqClient {
 
       return response
     } catch (error) {
-      logger.error('Groq research analysis error:', error)
+      logger.error('Groq research analysis error', error)
       throw new Error(`Research analysis failed: ${error}`)
     }
   }
@@ -219,7 +235,7 @@ export class GroqClient {
    * Generate structured insights using Zod schema
    */
   async generateStructuredInsights<T>(
-    data: any[], 
+    data: unknown[],
     query: string, 
     schema: z.ZodSchema<T>
   ): Promise<T> {
@@ -235,7 +251,7 @@ export class GroqClient {
 
       return await this.structuredOutput(prompt, schema)
     } catch (error) {
-      logger.error('Groq structured insights error:', error)
+      logger.error('Groq structured insights error', error)
       throw new Error(`Structured insights generation failed: ${error}`)
     }
   }
@@ -243,7 +259,7 @@ export class GroqClient {
   /**
    * Convert insights to mind map data
    */
-  async insightsToMindMap(insights: any) {
+  async insightsToMindMap(insights: unknown): Promise<MindMapData> {
     try {
       const prompt = `
         Convert the following product insights into a mind map structure:
@@ -269,16 +285,19 @@ export class GroqClient {
         const responseText = typeof response === 'string' ? response : String(response)
         const jsonMatch = responseText.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
-          return JSON.parse(jsonMatch[0])
+          const parsed = JSON.parse(jsonMatch[0])
+          if (isMindMapData(parsed)) {
+            return parsed
+          }
         }
       } catch (parseError) {
-        logger.warn('Failed to parse JSON from response:', parseError)
+        logger.warn('Failed to parse JSON from response', parseError)
       }
 
       // Fallback: return the raw response
       return { nodes: [], edges: [], rawResponse: String(response) }
     } catch (error) {
-      logger.error('Groq mind map conversion error:', error)
+      logger.error('Groq mind map conversion error', error)
       throw new Error(`Mind map conversion failed: ${error}`)
     }
   }

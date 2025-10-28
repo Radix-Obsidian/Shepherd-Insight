@@ -3,10 +3,10 @@
  * Analyzes competitor websites for pricing, features, and weaknesses
  */
 
-import { FirecrawlClient } from './firecrawl-client'
+import { FirecrawlClient, FirecrawlScrapeResponse } from './firecrawl-client'
 import { GroqClient } from './groq-client'
 import { z } from 'zod'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
 
 // Zod schema for competitor analysis
 const CompetitorAnalysisSchema = z.object({
@@ -65,6 +65,47 @@ export interface CompetitorAnalysisResult {
   }
 }
 
+interface ScrapedCompetitorSuccess {
+  url: string
+  mainPage: FirecrawlScrapeResponse | null
+  pricingPage: FirecrawlScrapeResponse | null
+  featuresPage: FirecrawlScrapeResponse | null
+  scrapedAt: string
+}
+
+interface ScrapedCompetitorError {
+  url: string
+  error: string
+  scrapedAt: string
+}
+
+type ScrapedCompetitorData = ScrapedCompetitorSuccess | ScrapedCompetitorError
+
+interface StructuredCompetitorSuccess {
+  url: string
+  analysis: z.infer<typeof CompetitorAnalysisSchema>
+  extractedAt: string
+}
+
+interface StructuredCompetitorError {
+  url: string
+  error: string
+}
+
+type StructuredCompetitorData = StructuredCompetitorSuccess | StructuredCompetitorError
+
+function isScrapedCompetitorSuccess(
+  data: ScrapedCompetitorData
+): data is ScrapedCompetitorSuccess {
+  return !('error' in data)
+}
+
+function isStructuredCompetitorSuccess(
+  data: StructuredCompetitorData
+): data is StructuredCompetitorSuccess {
+  return !('error' in data)
+}
+
 export class CompetitorAnalyzer {
   private firecrawl: FirecrawlClient
   private groq: GroqClient
@@ -106,10 +147,13 @@ export class CompetitorAnalyzer {
   /**
    * Scrape competitor websites
    */
-  private async scrapeCompetitorWebsites(urls: string[], maxDepth: number) {
+  private async scrapeCompetitorWebsites(
+    urls: string[],
+    _maxDepth: number
+  ): Promise<ScrapedCompetitorData[]> {
     logger.debug('📄 Scraping competitor websites...')
     
-    const results = []
+    const results: ScrapedCompetitorData[] = []
     
     for (const url of urls) {
       try {
@@ -120,7 +164,7 @@ export class CompetitorAnalyzer {
         })
 
         // Scrape pricing page if exists
-        let pricingPage = null
+        let pricingPage: FirecrawlScrapeResponse | null = null
         try {
           const pricingUrl = this.findPricingPage(url, mainPage)
           if (pricingUrl) {
@@ -130,11 +174,11 @@ export class CompetitorAnalyzer {
             })
           }
         } catch (error) {
-          logger.warn(`Could not scrape pricing page for ${url}:`, error)
+          logger.warn(`Could not scrape pricing page for ${url}`, error)
         }
 
         // Scrape about/features page
-        let featuresPage = null
+        let featuresPage: FirecrawlScrapeResponse | null = null
         try {
           const featuresUrl = this.findFeaturesPage(url, mainPage)
           if (featuresUrl) {
@@ -144,7 +188,7 @@ export class CompetitorAnalyzer {
             })
           }
         } catch (error) {
-          logger.warn(`Could not scrape features page for ${url}:`, error)
+          logger.warn(`Could not scrape features page for ${url}`, error)
         }
 
         results.push({
@@ -157,7 +201,7 @@ export class CompetitorAnalyzer {
 
         logger.debug(`✅ Scraped ${url}`)
       } catch (error) {
-        logger.error(`❌ Failed to scrape ${url}:`, error)
+        logger.error(`❌ Failed to scrape ${url}`, error)
         results.push({
           url,
           error: error instanceof Error ? error.message : String(error),
@@ -172,13 +216,16 @@ export class CompetitorAnalyzer {
   /**
    * Extract structured data using AI
    */
-  private async extractStructuredData(scrapedData: any[], includeContentAnalysis: boolean) {
+  private async extractStructuredData(
+    scrapedData: ScrapedCompetitorData[],
+    includeContentAnalysis: boolean
+  ): Promise<StructuredCompetitorData[]> {
     logger.debug('🤖 Extracting structured data with AI...')
 
-    const structuredResults = []
+    const structuredResults: StructuredCompetitorData[] = []
 
     for (const data of scrapedData) {
-      if (data.error) {
+      if (!isScrapedCompetitorSuccess(data)) {
         structuredResults.push({
           url: data.url,
           error: data.error
@@ -202,7 +249,7 @@ export class CompetitorAnalyzer {
 
         logger.debug(`✅ Extracted data for ${data.url}`)
       } catch (error) {
-        logger.error(`❌ Failed to extract data for ${data.url}:`, error)
+        logger.error(`❌ Failed to extract data for ${data.url}`, error)
         structuredResults.push({
           url: data.url,
           error: error instanceof Error ? error.message : String(error)
@@ -216,7 +263,10 @@ export class CompetitorAnalyzer {
   /**
    * Build extraction prompt for AI
    */
-  private buildExtractionPrompt(data: any, includeContentAnalysis: boolean): string {
+  private buildExtractionPrompt(
+    data: ScrapedCompetitorSuccess,
+    includeContentAnalysis: boolean
+  ): string {
     const { url, mainPage, pricingPage, featuresPage } = data
 
     let prompt = `Analyze this competitor website and extract structured information:
@@ -224,20 +274,20 @@ export class CompetitorAnalyzer {
 Website URL: ${url}
 
 Main Page Content:
-${mainPage?.markdown || mainPage?.content || 'No content available'}
+${mainPage?.data?.markdown || mainPage?.data?.content || 'No content available'}
 
 `
 
     if (pricingPage) {
       prompt += `Pricing Page Content:
-${pricingPage.markdown || pricingPage.content || 'No pricing content available'}
+${pricingPage.data?.markdown || pricingPage.data?.content || 'No pricing content available'}
 
 `
     }
 
     if (featuresPage) {
       prompt += `Features Page Content:
-${featuresPage.markdown || featuresPage.content || 'No features content available'}
+${featuresPage.data?.markdown || featuresPage.data?.content || 'No features content available'}
 
 `
     }
@@ -266,10 +316,13 @@ Provide a comprehensive analysis that can be used for competitive intelligence.`
   /**
    * Perform AI analysis on structured data
    */
-  private async performAIAnalysis(structuredData: any[], includeSocialAnalysis: boolean) {
+  private async performAIAnalysis(
+    structuredData: StructuredCompetitorData[],
+    includeSocialAnalysis: boolean
+  ): Promise<z.infer<typeof CompetitorAnalysisSchema>[]> {
     logger.debug('🧠 Performing AI analysis...')
 
-    const validData = structuredData.filter(d => !d.error)
+    const validData = structuredData.filter(isStructuredCompetitorSuccess)
     
     if (validData.length === 0) {
       throw new Error('No valid competitor data to analyze')
@@ -312,7 +365,9 @@ Return the analysis in the same structured format.`
   /**
    * Generate market insights and recommendations
    */
-  private async generateInsights(analysis: any[]) {
+  private async generateInsights(
+    analysis: z.infer<typeof CompetitorAnalysisSchema>[]
+  ) {
     logger.debug('💡 Generating insights and recommendations...')
 
     const prompt = `Based on this competitor analysis, provide strategic insights:
@@ -357,12 +412,17 @@ Format as JSON with market_insights and recommendations objects.`
   /**
    * Find pricing page URL
    */
-  private findPricingPage(baseUrl: string, mainPage: any): string | null {
-    const content = mainPage?.markdown || mainPage?.content || ''
-    const pricingKeywords = ['pricing', 'plans', 'cost', 'price', 'subscription']
+  private findPricingPage(
+    baseUrl: string,
+    mainPage: FirecrawlScrapeResponse | null
+  ): string | null {
+    const markdownContent = mainPage?.data?.markdown || ''
+    const contentData = mainPage?.data?.content
+    const contentArray = Array.isArray(contentData) ? contentData.join('\n') : contentData
+    const content = markdownContent || contentArray || ''
     
     // Look for pricing links in content
-    const pricingLinks = content.match(/\[([^\]]*pricing[^\]]*)\]\(([^)]+)\)/gi)
+    const pricingLinks = typeof content === 'string' ? content.match(/\[([^\]]*pricing[^\]]*)\]\(([^)]+)\)/gi) : null
     if (pricingLinks) {
       const link = pricingLinks[0].match(/\(([^)]+)\)/)?.[1]
       if (link) {
@@ -386,12 +446,17 @@ Format as JSON with market_insights and recommendations objects.`
   /**
    * Find features page URL
    */
-  private findFeaturesPage(baseUrl: string, mainPage: any): string | null {
-    const content = mainPage?.markdown || mainPage?.content || ''
-    const featureKeywords = ['features', 'capabilities', 'what-we-do', 'solutions']
+  private findFeaturesPage(
+    baseUrl: string,
+    mainPage: FirecrawlScrapeResponse | null
+  ): string | null {
+    const markdownContent = mainPage?.data?.markdown || ''
+    const contentData = mainPage?.data?.content
+    const contentArray = Array.isArray(contentData) ? contentData.join('\n') : contentData
+    const content = markdownContent || contentArray || ''
     
     // Look for features links in content
-    const featureLinks = content.match(/\[([^\]]*features[^\]]*)\]\(([^)]+)\)/gi)
+    const featureLinks = typeof content === 'string' ? content.match(/\[([^\]]*features[^\]]*)\]\(([^)]+)\)/gi) : null
     if (featureLinks) {
       const link = featureLinks[0].match(/\(([^)]+)\)/)?.[1]
       if (link) {

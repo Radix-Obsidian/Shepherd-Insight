@@ -60,7 +60,7 @@ export interface ResearchJob {
   query: string
   status: 'running' | 'completed' | 'failed'
   insight_data?: InsightData
-  artifacts?: any
+  artifacts?: unknown
   created_at: string
   completed_at?: string
 }

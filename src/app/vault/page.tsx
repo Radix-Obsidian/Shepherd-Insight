@@ -67,82 +67,83 @@ function VaultPageContent() {
         })}
       </nav>
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-6 p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Decision Vault</h1>
-          <p className="text-sm text-gray-600">This is what’s locked for {data.name} ({version.label}).</p>
+          <div>
+            <h1 className="text-2xl font-semibold">Decision Vault</h1>
+            <p className="text-sm text-gray-600">This is what&apos;s locked for {data.name} ({version.label}).</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <VersionSwitcher projectId={projectId} />
+            <Link href={`/insight?projectId=${projectId}&versionId=${versionId}`}>
+              <Button variant="outline">Back to Insight</Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2 items-center">
-          <VersionSwitcher projectId={projectId} />
-          <Link href={`/insight?projectId=${projectId}&versionId=${versionId}`}>
-            <Button variant="outline">Back to Insight</Button>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>MVP Feature Set — Locked</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {locked.mustHavesLocked.length ? (
+              locked.mustHavesLocked.map((feature, idx) => (
+                <div key={idx} className="rounded-lg border border-green-200 bg-green-50 p-3">
+                  <div className="font-medium text-green-900">{feature}</div>
+                  <p className="mt-1 text-xs text-green-800">
+                    Locked for {version.label}. Keep this in scope until the next version.
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-600">
+                Nothing locked yet. Use Lock Decisions from the Insight report.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Not Now — Parked Scope</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {locked.notNowLocked.length ? (
+              locked.notNowLocked.map((feature, idx) => (
+                <div key={idx} className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                  <div className="font-medium text-orange-900">NOT NOW — {feature}</div>
+                  <p className="mt-1 text-xs text-orange-800">
+                    Documented for later versions so your team stays focused.
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-600">
+                No features parked. Add &quot;not now&quot; items to keep future scope visible.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Constraints & Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed text-gray-700">
+              {data.constraints || 'Add constraints in the Insight report to keep delivery realities visible here.'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-2">
+          <Link href={`/exports?projectId=${projectId}&versionId=${versionId}`}>
+            <Button>Export Brief</Button>
+          </Link>
+          <Link href={`/mindmap?projectId=${projectId}`}>
+            <Button variant="ghost">Open Mind Map</Button>
           </Link>
         </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>MVP Feature Set — Locked</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {locked.mustHavesLocked.length ? (
-            locked.mustHavesLocked.map((feature, idx) => (
-              <div key={idx} className="border border-green-200 rounded-lg p-3 bg-green-50">
-                <div className="font-medium text-green-900">{feature}</div>
-                <p className="text-xs text-green-800 mt-1">
-                  Locked for {version.label}. Keep this in scope until the next version.
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-600">
-              Nothing locked yet. Use Lock Decisions from the Insight report.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Not Now — Parked Scope</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {locked.notNowLocked.length ? (
-            locked.notNowLocked.map((feature, idx) => (
-              <div key={idx} className="border border-orange-200 rounded-lg p-3 bg-orange-50">
-                <div className="font-medium text-orange-900">NOT NOW — {feature}</div>
-                <p className="text-xs text-orange-800 mt-1">
-                  Documented for later versions so your team stays focused.
-                </p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-600">
-              No features parked. Add “not now” items to keep future scope visible.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Constraints & Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            {data.constraints || 'Add constraints in the Insight report to keep delivery realities visible here.'}
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="flex gap-2">
-        <Link href={`/exports?projectId=${projectId}&versionId=${versionId}`}>
-          <Button>Export Brief</Button>
-        </Link>
-        <Link href={`/mindmap?projectId=${projectId}`}>
-          <Button variant="ghost">Open Mind Map</Button>
-        </Link>
       </div>
     </div>
   );
@@ -150,14 +151,16 @@ function VaultPageContent() {
 
 export default function VaultPage() {
   return (
-    <Suspense fallback={
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Decision Vault</h1>
-          <p className="text-sm text-gray-600">Loading...</p>
+    <Suspense
+      fallback={
+        <div className="p-6 space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold">Decision Vault</h1>
+            <p className="text-sm text-gray-600">Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <VaultPageContent />
     </Suspense>
   );

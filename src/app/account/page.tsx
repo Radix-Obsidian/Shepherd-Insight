@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,40 +25,9 @@ export default function AccountPage() {
   })
   const [error, setError] = useState<string>('')
 
-  const supabase = createSupabaseBrowserClient()
+  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
 
-  // Check session on mount
-  useEffect(() => {
-    checkSession()
-    
-    // Set up auth state change listener for redirects
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session?.user?.email)
-      
-      if (event === 'SIGNED_IN' && session) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || ''
-        })
-        setFormData({ email: '', password: '', confirmPassword: '' })
-        setIsLoading(false)
-        // Only redirect if not already on a protected route that isn't the account page
-        if (window.location.pathname !== '/dashboard' && window.location.pathname !== '/account') {
-          console.log('Redirecting to dashboard...')
-          router.push('/dashboard')
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setIsLoading(false)
-      }
-    })
-    
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -67,11 +36,49 @@ export default function AccountPage() {
           email: session.user.email || ''
         })
       }
-    } catch (error) {
-      console.error('Session check failed:', error)
-      setError('Unable to connect to authentication service')
+    } catch (sessionError: unknown) {
+      const message =
+        sessionError instanceof Error
+          ? sessionError.message
+          : 'Unable to connect to authentication service'
+      setError(message)
     }
-  }
+  }, [supabase])
+
+  // Check session on mount
+  useEffect(() => {
+    void checkSession()
+
+    // Set up auth state change listener for redirects
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || ''
+        })
+        setFormData({ email: '', password: '', confirmPassword: '' })
+        setIsLoading(false)
+        setError('')
+
+        if (
+          typeof window !== 'undefined' &&
+          window.location.pathname !== '/dashboard' &&
+          window.location.pathname !== '/account'
+        ) {
+          router.push('/dashboard')
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setIsLoading(false)
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
+  }, [checkSession, router, supabase])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,28 +91,24 @@ export default function AccountPage() {
       }
 
       if (authMode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password
         })
 
         if (error) throw error
-
-        // Don't redirect immediately - let onAuthStateChange handle it
-        console.log('Login successful, waiting for auth state change...')
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password
         })
 
         if (error) throw error
-
-        // Don't redirect immediately - let onAuthStateChange handle it
-        console.log('Registration successful, waiting for auth state change...')
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (authError: unknown) {
+      const message =
+        authError instanceof Error ? authError.message : 'Unable to authenticate'
+      setError(message)
       setIsLoading(false)
     }
   }
@@ -117,8 +120,10 @@ export default function AccountPage() {
       
       setUser(null)
       router.push('/')
-    } catch (error) {
-      console.error('Sign out failed:', error)
+    } catch (signOutError: unknown) {
+      const message =
+        signOutError instanceof Error ? signOutError.message : 'Unable to sign out'
+      setError(message)
     }
   }
 
