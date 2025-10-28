@@ -57,3 +57,4 @@ cypress/screenshots
 cypress/downloads
 .vercel
 .env.example
+*.env*
