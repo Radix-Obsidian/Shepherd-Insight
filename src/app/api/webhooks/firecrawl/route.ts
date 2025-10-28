@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { supabase } from '@/lib/supabase'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+
+export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
