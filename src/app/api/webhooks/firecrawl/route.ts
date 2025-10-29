@@ -1,9 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logger } from '@/lib/logger'
+import { getSupabaseEdgeFunctionUrl } from '@/lib/supabase-edge'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+// Simple in-memory rate limiter: 5 requests per minute per IP
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute in milliseconds
+const RATE_LIMIT_MAX = 5
+
+function getClientIP(request: NextRequest): string {
+  // Get IP from headers (works with Vercel)
+  const forwarded = request.headers.get('x-forwarded-for')
+  const realIP = request.headers.get('x-real-ip')
+  const clientIP = request.headers.get('x-client-ip')
+
+  // Return the first available IP, fallback to 'unknown'
+  return forwarded?.split(',')[0]?.trim() ||
+         realIP ||
+         clientIP ||
+         'unknown'
+}
+
+function checkRateLimit(ip: string): { allowed: boolean; resetIn: number } {
+  const now = Date.now()
+  const existing = rateLimitStore.get(ip)
+
+  if (!existing || now > existing.resetAt) {
+    // First request or window expired
+    rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+    return { allowed: true, resetIn: RATE_LIMIT_WINDOW }
+  }
+
+  if (existing.count >= RATE_LIMIT_MAX) {
+    // Rate limit exceeded
+    return { allowed: false, resetIn: existing.resetAt - now }
+  }
+
+  // Increment counter
+  existing.count++
+  rateLimitStore.set(ip, existing)
+  return { allowed: true, resetIn: existing.resetAt - now }
+}
+
+// Clean up expired entries periodically (simple cleanup)
+setInterval(() => {
+  const now = Date.now()
+  
+  // Convert iterator to array explicitly so TS doesn't need downlevelIteration
+  const entries = Array.from(rateLimitStore.entries())
+  
+  for (let i = 0; i < entries.length; i++) {
+    const ip = entries[i][0]
+    const data = entries[i][1]
+    
+    if (now > data.resetAt) {
+      rateLimitStore.delete(ip)
+    }
+  }
+}, RATE_LIMIT_WINDOW)
 
 interface FirecrawlEventData {
   jobId: string
@@ -58,13 +117,36 @@ function isUserProfile(value: unknown): value is UserProfile {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 5 requests per minute per IP
+    const clientIP = getClientIP(request)
+    const rateLimitResult = checkRateLimit(clientIP)
+
+    if (!rateLimitResult.allowed) {
+      logger.warn(`Rate limit exceeded for IP: ${clientIP}`)
+      const resetInSeconds = Math.ceil(rateLimitResult.resetIn / 1000)
+      return new Response(`Too Many Requests. Reset in ${resetInSeconds}s`, {
+        status: 429,
+        headers: {
+          'Retry-After': resetInSeconds.toString(),
+          'X-RateLimit-Reset': new Date(Date.now() + rateLimitResult.resetIn).toISOString()
+        }
+      })
+    }
+
+    // Create Supabase client inside handler (no top-level env reads)
+    const supabase = createSupabaseServerClient()
+    
+    // Read env vars inside handler
+    const webhookSecret = process.env.FIRECRAWL_WEBHOOK_SECRET
+    const NEXT_PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
+    const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY
+
     // Verify webhook signature
     const signature = request.headers.get('X-Firecrawl-Signature')
-    const webhookSecret = process.env.FIRECRAWL_WEBHOOK_SECRET
 
     if (!signature || !webhookSecret) {
-      logger.error('Missing webhook signature or secret')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      logger.warn('Missing webhook signature or secret')
+      return new Response('Unauthorized', { status: 401 })
     }
 
     // Get raw body for signature verification
@@ -73,14 +155,14 @@ export async function POST(request: NextRequest) {
     // Extract hash from signature header
     const signatureParts = signature.split('=')
     if (signatureParts.length !== 2) {
-      logger.error('Invalid signature header format')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      logger.warn('Invalid signature header format')
+      return new Response('Unauthorized', { status: 401 })
     }
 
     const [algorithm, hash] = signatureParts
     if (algorithm !== 'sha256' || !hash) {
-      logger.error('Invalid signature algorithm', algorithm)
-      return NextResponse.json({ error: 'Invalid signature algorithm' }, { status: 401 })
+      logger.warn(`Invalid signature algorithm: ${algorithm}`)
+      return new Response('Unauthorized', { status: 401 })
     }
 
     // Compute expected signature
@@ -91,8 +173,8 @@ export async function POST(request: NextRequest) {
 
     // Verify signature using timing-safe comparison
     if (!crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
-      logger.error('Invalid webhook signature')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      logger.warn('Invalid webhook signature - hash mismatch')
+      return new Response('Unauthorized', { status: 401 })
     }
 
     // Parse verified webhook payload
@@ -105,46 +187,46 @@ export async function POST(request: NextRequest) {
     const event = parsedEvent
     logger.debug('Verified Firecrawl webhook', event)
 
-    // Handle different event types
+    // Handle different event types (pass supabase client and env vars to handlers)
     switch (event.type) {
       case 'crawl.started':
-        await handleCrawlStarted(event)
+        await handleCrawlStarted(event, supabase)
         break
       
       case 'crawl.page':
-        await handleCrawlPage(event)
+        await handleCrawlPage(event, supabase)
         break
       
       case 'crawl.completed':
-        await handleCrawlCompleted(event)
+        await handleCrawlCompleted(event, supabase, NEXT_PUBLIC_SITE_URL, INTERNAL_API_KEY)
         break
       
       case 'crawl.failed':
-        await handleCrawlFailed(event)
+        await handleCrawlFailed(event, supabase)
         break
       
       case 'batch.started':
-        await handleBatchStarted(event)
+        await handleBatchStarted(event, supabase)
         break
       
       case 'batch.page':
-        await handleBatchPage(event)
+        await handleBatchPage(event, supabase)
         break
       
       case 'batch.completed':
-        await handleBatchCompleted(event)
+        await handleBatchCompleted(event, supabase)
         break
       
       case 'extract.started':
-        await handleExtractStarted(event)
+        await handleExtractStarted(event, supabase)
         break
       
       case 'extract.completed':
-        await handleExtractCompleted(event)
+        await handleExtractCompleted(event, supabase)
         break
       
       case 'extract.failed':
-        await handleExtractFailed(event)
+        await handleExtractFailed(event, supabase)
         break
       
       default:
@@ -163,7 +245,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCrawlStarted(event: FirecrawlEvent) {
+async function handleCrawlStarted(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Crawl started', event.data.jobId)
   
   // Update job status in Supabase
@@ -182,7 +264,7 @@ async function handleCrawlStarted(event: FirecrawlEvent) {
   }
 }
 
-async function handleCrawlPage(event: FirecrawlEvent) {
+async function handleCrawlPage(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Crawl page completed', event.data.url)
   
   // Update progress for each page crawled
@@ -199,7 +281,12 @@ async function handleCrawlPage(event: FirecrawlEvent) {
   }
 }
 
-async function handleCrawlCompleted(event: FirecrawlEvent) {
+async function handleCrawlCompleted(
+  event: FirecrawlEvent, 
+  supabase: SupabaseClient,
+  NEXT_PUBLIC_SITE_URL: string | undefined,
+  INTERNAL_API_KEY: string | undefined
+) {
   logger.debug('Crawl completed', event.data.jobId)
   
   try {
@@ -227,17 +314,17 @@ async function handleCrawlCompleted(event: FirecrawlEvent) {
       .eq('job_id', event.data.jobId)
 
     // Trigger insight generation
-    await triggerInsightGeneration(job, event.data)
+    await triggerInsightGeneration(job, event.data, supabase, NEXT_PUBLIC_SITE_URL, INTERNAL_API_KEY)
 
     // Send notification
-    await sendCompletionNotification(job, 'crawl')
+    await sendCompletionNotification(job, 'crawl', supabase)
     
   } catch (error) {
     logger.error('Failed to handle crawl completion', error)
   }
 }
 
-async function handleCrawlFailed(event: FirecrawlEvent) {
+async function handleCrawlFailed(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Crawl failed', event.data.jobId, event.data.error)
   
   try {
@@ -255,7 +342,7 @@ async function handleCrawlFailed(event: FirecrawlEvent) {
   }
 }
 
-async function handleBatchStarted(event: FirecrawlEvent) {
+async function handleBatchStarted(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Batch scrape started', event.data.jobId)
   
   try {
@@ -273,7 +360,7 @@ async function handleBatchStarted(event: FirecrawlEvent) {
   }
 }
 
-async function handleBatchPage(event: FirecrawlEvent) {
+async function handleBatchPage(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Batch page completed', event.data.url)
   
   try {
@@ -289,7 +376,7 @@ async function handleBatchPage(event: FirecrawlEvent) {
   }
 }
 
-async function handleBatchCompleted(event: FirecrawlEvent) {
+async function handleBatchCompleted(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Batch scrape completed', event.data.jobId)
   
   try {
@@ -307,7 +394,7 @@ async function handleBatchCompleted(event: FirecrawlEvent) {
   }
 }
 
-async function handleExtractStarted(event: FirecrawlEvent) {
+async function handleExtractStarted(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Extract started', event.data.jobId)
   
   try {
@@ -325,7 +412,7 @@ async function handleExtractStarted(event: FirecrawlEvent) {
   }
 }
 
-async function handleExtractCompleted(event: FirecrawlEvent) {
+async function handleExtractCompleted(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Extract completed', event.data.jobId)
   
   try {
@@ -343,7 +430,7 @@ async function handleExtractCompleted(event: FirecrawlEvent) {
   }
 }
 
-async function handleExtractFailed(event: FirecrawlEvent) {
+async function handleExtractFailed(event: FirecrawlEvent, supabase: SupabaseClient) {
   logger.debug('Extract failed', event.data.jobId, event.data.error)
   
   try {
@@ -364,16 +451,27 @@ async function handleExtractFailed(event: FirecrawlEvent) {
 /**
  * Trigger insight generation from crawl data
  */
-async function triggerInsightGeneration(job: InsightJobRecord, crawlData: FirecrawlEventData) {
+async function triggerInsightGeneration(
+  job: InsightJobRecord, 
+  crawlData: FirecrawlEventData,
+  supabase: SupabaseClient,
+  NEXT_PUBLIC_SITE_URL: string | undefined,
+  INTERNAL_API_KEY: string | undefined
+) {
   try {
     logger.debug('Triggering insight generation for job', job.id)
 
     // Call the research API to generate insights
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/research/run`, {
+    // Use relative path for same-origin requests, or build full URL if needed
+    const researchUrl = NEXT_PUBLIC_SITE_URL 
+      ? `${NEXT_PUBLIC_SITE_URL}/api/research/run`
+      : '/api/research/run'
+    
+    const response = await fetch(researchUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.INTERNAL_API_KEY || 'internal-key'}`
+        'Authorization': `Bearer ${INTERNAL_API_KEY || ''}`
       },
       body: JSON.stringify({
         query: job.query,
@@ -410,7 +508,11 @@ async function triggerInsightGeneration(job: InsightJobRecord, crawlData: Firecr
 /**
  * Send completion notification
  */
-async function sendCompletionNotification(job: InsightJobRecord, type: 'crawl' | 'extract' | 'batch') {
+async function sendCompletionNotification(
+  job: InsightJobRecord, 
+  type: 'crawl' | 'extract' | 'batch',
+  supabase: SupabaseClient
+) {
   try {
     // Get user email
     const { data: user, error: userError } = await supabase
@@ -424,12 +526,16 @@ async function sendCompletionNotification(job: InsightJobRecord, type: 'crawl' |
       return
     }
 
+    // Read SUPABASE_SERVICE_ROLE_KEY inside function (no top-level env reads)
+    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
     // Send email notification via Supabase Edge Function
-    const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-notification`, {
+    const notificationUrl = getSupabaseEdgeFunctionUrl('send-notification')
+    const notificationResponse = await fetch(notificationUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY || ''}`
       },
       body: JSON.stringify({
         to: user.email,

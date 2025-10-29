@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 
+export const runtime = 'nodejs'
+
 type SupabasePostAction =
   | 'create-project'
   | 'create-version'

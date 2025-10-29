@@ -37,6 +37,7 @@ export interface MindMapActions {
   loadFromLocalStorage: (projectId: string) => void
   saveToLocalStorage: (projectId: string, state: { nodes: MindMapNode[]; edges: MindMapEdge[] }) => void
   setSelectedNode: (nodeId: string | null) => void
+  setProjectId: (projectId: string | null) => void
 }
 
 export type MindMapStore = MindMapState & MindMapActions

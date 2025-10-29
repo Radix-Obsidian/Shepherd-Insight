@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
+export const runtime = 'nodejs'
+
 type AuthAction = 'signup' | 'signin' | 'signout' | 'session'
 
 interface AuthRequestBody {
