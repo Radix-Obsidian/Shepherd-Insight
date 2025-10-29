@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
-import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 import { getSupabaseEdgeFunctionUrl } from '@/lib/supabase-edge'
 import { NEXT_PUBLIC_SITE_URL } from '@/lib/env'
-import { INTERNAL_API_KEY } from '@/lib/env.server'
+import { INTERNAL_API_KEY, FIRECRAWL_WEBHOOK_SECRET } from '@/lib/env.server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 interface FirecrawlEventData {
   jobId: string
@@ -63,7 +64,10 @@ export async function POST(request: NextRequest) {
   try {
     // Verify webhook signature
     const signature = request.headers.get('X-Firecrawl-Signature')
-    const webhookSecret = process.env.FIRECRAWL_WEBHOOK_SECRET
+    const webhookSecret = FIRECRAWL_WEBHOOK_SECRET
+    
+    // Create Supabase client inside handler (no top-level env reads)
+    const supabase = createSupabaseServerClient()
 
     if (!signature || !webhookSecret) {
       logger.error('Missing webhook signature or secret')
