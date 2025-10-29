@@ -175,6 +175,10 @@ export const useMindMapStore = create<MindMapStore>()(
       setSelectedNode: (nodeId) => {
         set({ selectedNode: nodeId })
       },
+
+      setProjectId: (projectId: string | null) => {
+        set({ projectId })
+      },
     }),
     {
       name: 'mindmap-store',

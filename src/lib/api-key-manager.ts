@@ -1,5 +1,8 @@
 // Helper function to fetch API keys from Supabase Edge Function
 // This provides a fallback when environment variables are not available locally
+import { getSupabaseEdgeFunctionUrl } from './supabase-edge'
+import { NEXT_PUBLIC_SUPABASE_ANON_KEY } from './env'
+import { logger } from '@/lib/logger'
 
 export async function getApiKey(keyName: string): Promise<string> {
   // First try local environment variables
@@ -7,23 +10,24 @@ export async function getApiKey(keyName: string): Promise<string> {
     return process.env[keyName]!
   }
   
-  // Fallback to Edge Function
+  // Fallback to Edge Function (server-side only)
   try {
-    const response = await fetch('https://jiecqmnygnqrfntqoqsg.supabase.co/functions/v1/env-config', {
+    const edgeFunctionUrl = getSupabaseEdgeFunctionUrl('env-config')
+    const response = await fetch(edgeFunctionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+        'Authorization': `Bearer ${NEXT_PUBLIC_SUPABASE_ANON_KEY}`
       },
-      body: JSON.stringify({ action: 'get-config' })
+      body: JSON.stringify({ name: keyName })
     })
     
     if (!response.ok) {
       throw new Error(`Failed to fetch config: ${response.statusText}`)
     }
     
-    const config = await response.json()
-    const apiKey = config[keyName]
+    const result = await response.json()
+    const apiKey = result.value
     
     if (!apiKey) {
       throw new Error(`${keyName} not found in Edge Function config`)
@@ -35,4 +39,3 @@ export async function getApiKey(keyName: string): Promise<string> {
     throw new Error(`${keyName} environment variable is required`)
   }
 }
-import { logger } from '@/lib/logger';

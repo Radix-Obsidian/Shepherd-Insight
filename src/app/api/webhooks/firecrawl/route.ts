@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { getSupabaseEdgeFunctionUrl } from '@/lib/supabase-edge'
+import { NEXT_PUBLIC_SITE_URL } from '@/lib/env'
+import { INTERNAL_API_KEY } from '@/lib/env.server'
 
 export const runtime = 'nodejs'
 
@@ -369,11 +372,16 @@ async function triggerInsightGeneration(job: InsightJobRecord, crawlData: Firecr
     logger.debug('Triggering insight generation for job', job.id)
 
     // Call the research API to generate insights
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/research/run`, {
+    // Use relative path for same-origin requests, or build full URL if needed
+    const researchUrl = NEXT_PUBLIC_SITE_URL 
+      ? `${NEXT_PUBLIC_SITE_URL}/api/research/run`
+      : '/api/research/run'
+    
+    const response = await fetch(researchUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.INTERNAL_API_KEY || 'internal-key'}`
+        'Authorization': `Bearer ${INTERNAL_API_KEY}`
       },
       body: JSON.stringify({
         query: job.query,
@@ -425,7 +433,8 @@ async function sendCompletionNotification(job: InsightJobRecord, type: 'crawl' |
     }
 
     // Send email notification via Supabase Edge Function
-    const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-notification`, {
+    const notificationUrl = getSupabaseEdgeFunctionUrl('send-notification')
+    const notificationResponse = await fetch(notificationUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
