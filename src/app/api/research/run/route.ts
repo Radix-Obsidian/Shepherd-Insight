@@ -2,12 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FiresearchAdapter } from '@/lib/research/firesearch-adapter'
 import { supabase } from '@/lib/supabase'
 import { InsightData } from '@/types/insight'
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/logger'
+import { validateInternalApiKey } from '@/lib/internal-auth'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate internal API key for server-to-server calls
+    const authHeader = request.headers.get('Authorization')
+    const authResult = validateInternalApiKey(authHeader)
+
+    // If this is an internal call (has valid API key), skip user auth
+    // Otherwise, require user authentication
+    if (!authResult.valid) {
+      if (authResult.reason === 'missing') {
+        // No API key provided, require user authentication
+        const supabaseServer = createSupabaseServerClient()
+        const { data: { user }, error: authError } = await supabaseServer.auth.getUser()
+
+        if (authError || !user) {
+          return new Response('Unauthorized', { status: 401 })
+        }
+      } else {
+        // Invalid or malformed API key
+        return new Response('Forbidden', { status: 403 })
+      }
+    }
+
     const payload = await request.json()
     if (typeof payload !== 'object' || payload === null) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })

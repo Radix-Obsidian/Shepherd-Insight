@@ -8,6 +8,55 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Simple in-memory rate limiter: 5 requests per minute per IP
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute in milliseconds
+const RATE_LIMIT_MAX = 5
+
+function getClientIP(request: NextRequest): string {
+  // Get IP from headers (works with Vercel)
+  const forwarded = request.headers.get('x-forwarded-for')
+  const realIP = request.headers.get('x-real-ip')
+  const clientIP = request.headers.get('x-client-ip')
+
+  // Return the first available IP, fallback to 'unknown'
+  return forwarded?.split(',')[0]?.trim() ||
+         realIP ||
+         clientIP ||
+         'unknown'
+}
+
+function checkRateLimit(ip: string): { allowed: boolean; resetIn: number } {
+  const now = Date.now()
+  const existing = rateLimitStore.get(ip)
+
+  if (!existing || now > existing.resetAt) {
+    // First request or window expired
+    rateLimitStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+    return { allowed: true, resetIn: RATE_LIMIT_WINDOW }
+  }
+
+  if (existing.count >= RATE_LIMIT_MAX) {
+    // Rate limit exceeded
+    return { allowed: false, resetIn: existing.resetAt - now }
+  }
+
+  // Increment counter
+  existing.count++
+  rateLimitStore.set(ip, existing)
+  return { allowed: true, resetIn: existing.resetAt - now }
+}
+
+// Clean up expired entries periodically (simple cleanup)
+setInterval(() => {
+  const now = Date.now()
+  for (const [ip, data] of rateLimitStore.entries()) {
+    if (now > data.resetAt) {
+      rateLimitStore.delete(ip)
+    }
+  }
+}, RATE_LIMIT_WINDOW)
+
 interface FirecrawlEventData {
   jobId: string
   url?: string
@@ -61,6 +110,22 @@ function isUserProfile(value: unknown): value is UserProfile {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 5 requests per minute per IP
+    const clientIP = getClientIP(request)
+    const rateLimitResult = checkRateLimit(clientIP)
+
+    if (!rateLimitResult.allowed) {
+      logger.warn(`Rate limit exceeded for IP: ${clientIP}`)
+      const resetInSeconds = Math.ceil(rateLimitResult.resetIn / 1000)
+      return new Response(`Too Many Requests. Reset in ${resetInSeconds}s`, {
+        status: 429,
+        headers: {
+          'Retry-After': resetInSeconds.toString(),
+          'X-RateLimit-Reset': new Date(Date.now() + rateLimitResult.resetIn).toISOString()
+        }
+      })
+    }
+
     // Create Supabase client inside handler (no top-level env reads)
     const supabase = createSupabaseServerClient()
     
@@ -73,8 +138,8 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('X-Firecrawl-Signature')
 
     if (!signature || !webhookSecret) {
-      logger.error('Missing webhook signature or secret')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      logger.warn('Missing webhook signature or secret')
+      return new Response('Unauthorized', { status: 401 })
     }
 
     // Get raw body for signature verification
@@ -83,14 +148,14 @@ export async function POST(request: NextRequest) {
     // Extract hash from signature header
     const signatureParts = signature.split('=')
     if (signatureParts.length !== 2) {
-      logger.error('Invalid signature header format')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      logger.warn('Invalid signature header format')
+      return new Response('Unauthorized', { status: 401 })
     }
 
     const [algorithm, hash] = signatureParts
     if (algorithm !== 'sha256' || !hash) {
-      logger.error('Invalid signature algorithm', algorithm)
-      return NextResponse.json({ error: 'Invalid signature algorithm' }, { status: 401 })
+      logger.warn(`Invalid signature algorithm: ${algorithm}`)
+      return new Response('Unauthorized', { status: 401 })
     }
 
     // Compute expected signature
@@ -101,8 +166,8 @@ export async function POST(request: NextRequest) {
 
     // Verify signature using timing-safe comparison
     if (!crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
-      logger.error('Invalid webhook signature')
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      logger.warn('Invalid webhook signature - hash mismatch')
+      return new Response('Unauthorized', { status: 401 })
     }
 
     // Parse verified webhook payload

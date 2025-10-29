@@ -20,7 +20,22 @@ Complete guide for deploying Shepherd Insight to production on Vercel with Supab
 openssl rand -hex 32
 ```
 
-**Save this output!** You'll need it for Vercel environment variables.
+**Critical:** Generate this key ONCE and use the **SAME value** for:
+- Local development (`.env.local`)
+- Vercel production environment variables
+- Supabase Edge Function secrets
+
+This ensures internal API calls between services use the same authentication key.
+
+**Expected format:** 64-character hexadecimal string (e.g., `a1b2c3d4...`)
+
+**Save this output securely!** Never commit it to git.
+
+**Security Notes:**
+- **If INTERNAL_API_KEY is ever exposed or compromised, rotate it immediately** by generating a new key and updating all three locations
+- Internal API calls use `Authorization: Bearer <INTERNAL_API_KEY>` header for server-to-server authentication
+- This key enables access to research API endpoints without requiring user authentication
+- Rate limiting is enforced on webhook endpoints to prevent abuse
 
 ### 1.2 Set Environment Variables in Vercel
 
@@ -55,6 +70,7 @@ NODE_ENV=production
 **Important:**
 - Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser
 - All other variables are server-only secrets
+- **INTERNAL_API_KEY must be identical** across local dev, Vercel, and Supabase Edge Functions
 - Set these for **Production**, **Preview**, and **Development** environments as needed
 
 ## Part 2: Supabase Setup
