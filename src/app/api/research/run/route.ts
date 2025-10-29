@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { InsightData } from '@/types/insight'
 import { logger } from '@/lib/logger';
 
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()

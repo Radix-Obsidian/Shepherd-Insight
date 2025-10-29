@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logger } from '@/lib/logger'
 
+export const runtime = 'nodejs'
+
 /**
  * GET /api/insights?projectId=...
  * Fetches insight data for a project

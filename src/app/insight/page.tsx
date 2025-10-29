@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SectionCard } from '@/components/SectionCard';
 import { LockDecisionsModal } from '@/components/LockDecisionsModal';
 import { InsightHeader } from './InsightHeader';
+import type { LockedDecisions } from '@/types/project';
 
 const tabs = [
   { label: 'Insight', href: '/insight' },
@@ -212,7 +213,15 @@ function InsightPageContent() {
   const positioning =
     `We help ${version.audience || 'users'} solve ${version.problem || 'their problem'} without ${version.why_current_fails || 'frustration'}, by ${version.promise || 'our approach'}.`;
 
-  const locked = version.locked_decisions || { mustHavesLocked: [], notNowLocked: [] };
+  // Ensure locked decisions always have arrays, never undefined
+  const locked: LockedDecisions = {
+    mustHavesLocked: Array.isArray(version.locked_decisions?.mustHavesLocked) 
+      ? version.locked_decisions.mustHavesLocked 
+      : [],
+    notNowLocked: Array.isArray(version.locked_decisions?.notNowLocked) 
+      ? version.locked_decisions.notNowLocked 
+      : [],
+  };
 
   return (
     <div className="space-y-6">

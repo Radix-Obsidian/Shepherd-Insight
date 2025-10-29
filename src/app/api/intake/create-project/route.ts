@@ -4,6 +4,8 @@ import { logger } from '@/lib/logger'
 import { INTERNAL_API_KEY } from '@/lib/env.server'
 import { NEXT_PUBLIC_SITE_URL } from '@/lib/env'
 
+export const runtime = 'nodejs'
+
 interface CreateProjectRequest {
   problemStatement: string
   // Optional: full form data for advanced users

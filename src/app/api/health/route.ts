@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
+export const runtime = 'nodejs'
+
 /**
  * Health check endpoint for deployment verification
  * GET /api/health
