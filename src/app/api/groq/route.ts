@@ -5,8 +5,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { GroqClient } from '@/lib/research/groq-client'
 
-export const runtime = 'nodejs'
-
 const groq = new GroqClient({ temperature: 0.2 })
 
 const AnalysisSchema = z.object({

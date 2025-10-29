@@ -6,8 +6,6 @@ import { z } from 'zod'
 import { FirecrawlClient } from '@/lib/research/firecrawl-client'
 import { GroqClient } from '@/lib/research/groq-client'
 
-export const runtime = 'nodejs'
-
 const firecrawl = new FirecrawlClient()
 const groq = new GroqClient({ temperature: 0.25 })
 
