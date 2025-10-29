@@ -50,7 +50,14 @@ function checkRateLimit(ip: string): { allowed: boolean; resetIn: number } {
 // Clean up expired entries periodically (simple cleanup)
 setInterval(() => {
   const now = Date.now()
-  for (const [ip, data] of rateLimitStore.entries()) {
+  
+  // Convert iterator to array explicitly so TS doesn't need downlevelIteration
+  const entries = Array.from(rateLimitStore.entries())
+  
+  for (let i = 0; i < entries.length; i++) {
+    const ip = entries[i][0]
+    const data = entries[i][1]
+    
     if (now > data.resetAt) {
       rateLimitStore.delete(ip)
     }
