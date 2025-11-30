@@ -36,14 +36,11 @@ export {
   synthesizeQuickResearch,
 } from './persona-synth'
 
-// TODO: Opportunity Scorer - Slice 3
-// export { scoreOpportunities } from './opportunity-score'
-
-// TODO: Feature Mapper - Slice 3
-// export { mapFeatures } from './feature-mapper'
-
-// TODO: MVP Prioritizer (powers Blueprint) - Slice 3
-// export { prioritizeMvp } from './mvp-prioritizer'
+// Blueprint Composer (powers Blueprint)
+export {
+  generateBlueprint,
+  generateQuickBlueprint,
+} from './blueprint-composer'
 
 // TODO: Story Composer (powers Blueprint) - Slice 3
 // export { composeNarrative } from './story-composer'

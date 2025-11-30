@@ -97,41 +97,48 @@ export interface BlueprintInput {
   timeline?: string
 }
 
-export interface Feature {
+export interface UserStory {
+  asA: string
+  iWant: string
+  soThat: string
+}
+
+export interface MVPFeature {
   name: string
   description: string
-  painPointsAddressed: string[]
   priority: 'must-have' | 'should-have' | 'nice-to-have'
-  effort: 'low' | 'medium' | 'high'
-  value: 'low' | 'medium' | 'high'
+  effort: 'small' | 'medium' | 'large'
+  painPointsAddressed: string[]
+  userStories: UserStory[]
+}
+
+export interface RoadmapWeek {
+  week: number
+  theme: string
+  goals: string[]
+  deliverables: string[]
+}
+
+export interface SuccessMetric {
+  metric: string
+  target: string
+  why: string
+}
+
+export interface Risk {
+  risk: string
+  mitigation: string
 }
 
 export interface BlueprintOutput {
-  mvpScope: {
-    summary: string
-    coreFeatures: Feature[]
-    outOfScope: string[]
-  }
-  roadmap: {
-    phase: string
-    duration: string
-    features: string[]
-    milestone: string
-  }[]
-  narrative: {
-    problemNarrative: string
-    solutionNarrative: string
-    valueProposition: string
-    pitchOneLiner: string
-  }
-  devHandoff: {
-    userStories: {
-      asA: string
-      iWant: string
-      soThat: string
-      acceptanceCriteria: string[]
-    }[]
-  }
+  productVision: string
+  mvpScope: string
+  coreValue: string
+  features: MVPFeature[]
+  roadmap: RoadmapWeek[]
+  successMetrics: SuccessMetric[]
+  risks: Risk[]
+  launchChecklist: string[]
 }
 
 export interface BlueprintSession {
