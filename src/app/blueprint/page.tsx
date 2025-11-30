@@ -13,7 +13,7 @@
  * Customer Transformation: "I understand my users" → "I know exactly what to build first"
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FileText, Loader2, Target, Rocket, CheckCircle2, Calendar, AlertTriangle, Download, Star } from 'lucide-react'
 import { JourneyProgress } from '@/components/journey-progress'
@@ -53,7 +53,7 @@ interface BlueprintOutput {
 
 type ViewState = 'loading' | 'generating' | 'result' | 'error'
 
-export default function BlueprintPage() {
+function BlueprintPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clarityId = searchParams.get('clarityId')
@@ -74,6 +74,7 @@ export default function BlueprintPage() {
     }
 
     generateBlueprint()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clarityId, researchId])
 
   const generateBlueprint = async () => {
@@ -479,5 +480,17 @@ export default function BlueprintPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function BlueprintPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      </div>
+    }>
+      <BlueprintPageContent />
+    </Suspense>
   )
 }

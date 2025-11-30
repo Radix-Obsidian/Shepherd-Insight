@@ -159,7 +159,7 @@ export default function CompassPage() {
             {/* Main Idea Input - BIG */}
             <div>
               <label className="block text-lg font-medium text-slate-800 mb-3">
-                What's your idea?
+                What&apos;s your idea?
               </label>
               <textarea
                 value={idea}
@@ -169,7 +169,7 @@ export default function CompassPage() {
                 autoFocus
               />
               <p className="mt-2 text-sm text-slate-500">
-                Don't worry about being perfect. Just describe your idea as you think about it.
+                Don&apos;t worry about being perfect. Just describe your idea as you think about it.
               </p>
             </div>
 
@@ -252,7 +252,7 @@ export default function CompassPage() {
                   Clarity Found
                 </h2>
                 <p className="text-green-700">
-                  Here's what we discovered about your idea
+                  Here&apos;s what we discovered about your idea
                 </p>
               </div>
             </div>

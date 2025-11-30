@@ -13,7 +13,7 @@
  * Customer Transformation: "I have clarity" → "I understand my users deeply"
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, Loader2, ArrowRight, Users, Heart, Zap, Target, Lightbulb, AlertCircle } from 'lucide-react'
 import { JourneyProgress } from '@/components/journey-progress'
@@ -50,7 +50,7 @@ interface ClarityOutput {
 
 type ViewState = 'loading-clarity' | 'input' | 'researching' | 'result' | 'error'
 
-export default function MusePage() {
+function MusePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const clarityId = searchParams.get('clarityId')
@@ -435,5 +435,17 @@ export default function MusePage() {
 
       </div>
     </div>
+  )
+}
+
+export default function MusePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    }>
+      <MusePageContent />
+    </Suspense>
   )
 }
