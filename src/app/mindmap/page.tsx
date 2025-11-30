@@ -1,7 +1,15 @@
 'use client'
 
+/**
+ * Mind Map Builder
+ * 
+ * Visualize your ideas with AI-powered mind map generation.
+ * Works standalone or with Shepherd Journey data.
+ */
+
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { ReactFlowProvider } from 'reactflow'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +17,7 @@ import { MindMapBuilder } from '@/components/mindmap/MindMapBuilder'
 import { Toolbar } from '@/components/mindmap/Toolbar'
 import { AIControls } from '@/components/mindmap/AIControls'
 import { useMindMapStore } from '@/lib/mindmap/store'
+import { Network, Compass, Sparkles } from 'lucide-react'
 
 function MindMapPageContent() {
   const searchParams = useSearchParams()
@@ -33,6 +42,24 @@ function MindMapPageContent() {
 
   return (
     <div className="space-y-6">
+      {/* Journey Tip Banner */}
+      {!projectId && (
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-indigo-50 border border-amber-200 rounded-xl">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            <p className="text-sm text-slate-700">
+              <span className="font-medium">Pro tip:</span> Complete the Shepherd Journey first, then generate a mind map from your clarity, personas, or blueprint!
+            </p>
+          </div>
+          <Link href="/compass">
+            <Button size="sm" variant="outline" className="gap-2">
+              <Compass className="w-4 h-4" />
+              Start Journey
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

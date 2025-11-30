@@ -32,9 +32,8 @@ const iconMap = {
   'Compass': Compass,
   'Muse': BookOpen,
   'Blueprint': FileText,
-  // Legacy
-  'New Insight': Lightbulb,
   'Vault': Lock,
+  // Tools
   'Mind Map': Network,
   'Exports': Download,
   'Account': User,

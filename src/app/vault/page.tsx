@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * Decision Vault
+ * 
+ * Part of the Shepherd Journey: Compass → Muse → Blueprint → Vault
+ * 
+ * Lock your finalized decisions from Blueprint:
+ * - MVP scope locked
+ * - Features prioritized
+ * - Launch checklist committed
+ */
+
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -7,6 +18,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import VersionSwitcher from '@/components/VersionSwitcher';
 import { useAppStore } from '@/lib/store';
+import { Lock, CheckCircle2, AlertCircle, ArrowRight, Compass, BookOpen, FileText } from 'lucide-react';
+import { JourneyProgress } from '@/components/journey-progress';
 
 const tabs = [
   { label: 'Insight', href: '/insight' },
@@ -19,16 +32,91 @@ function VaultPageContent() {
   const params = useSearchParams();
   const projectId = params.get('projectId') || '';
   const versionId = params.get('versionId') || '';
+  const blueprintId = params.get('blueprintId') || '';
+  const clarityId = params.get('clarityId') || '';
+  const researchId = params.get('researchId') || '';
+  
   const version = useAppStore(s =>
     projectId && versionId ? s.getProjectVersion(projectId, versionId) : undefined
   );
 
-  if (!projectId || !versionId || !version) {
+  // If no project/version and no blueprint, show journey start
+  if (!projectId && !blueprintId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-100 mb-6">
+              <Lock className="w-8 h-8 text-purple-600" />
+            </div>
+            <h1 className="text-4xl font-bold text-slate-900 mb-3">
+              Decision Vault
+            </h1>
+            <p className="text-xl text-slate-600">
+              Lock Decisions
+            </p>
+          </div>
+
+          {/* Journey Progress */}
+          <JourneyProgress currentStep="compass" />
+
+          {/* Call to Action */}
+          <Card className="max-w-xl mx-auto">
+            <CardContent className="py-12 text-center">
+              <Lock className="w-12 h-12 text-purple-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Ready to Lock Your Decisions?</h3>
+              <p className="text-slate-600 mb-6">
+                Complete the Shepherd Journey first to get your MVP blueprint, then lock your decisions here.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/compass">
+                  <Button size="lg" className="w-full sm:w-auto">
+                    <Compass className="w-5 h-5 mr-2" />
+                    Start with Compass
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-slate-200">
+                <p className="text-sm text-slate-500 mb-4">The Shepherd Journey</p>
+                <div className="flex items-center justify-center gap-3 text-sm">
+                  <div className="flex items-center gap-1 text-amber-600">
+                    <Compass className="w-4 h-4" />
+                    <span>Compass</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <div className="flex items-center gap-1 text-indigo-600">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Muse</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <div className="flex items-center gap-1 text-emerald-600">
+                    <FileText className="w-4 h-4" />
+                    <span>Blueprint</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300" />
+                  <div className="flex items-center gap-1 text-purple-600 font-medium">
+                    <Lock className="w-4 h-4" />
+                    <span>Vault</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Legacy project/version flow
+  if (!version && projectId) {
     return (
       <div className="p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Decision Vault</h1>
-          <p className="text-sm text-gray-600">Lock what’s in, keep track of what waits.</p>
+          <p className="text-sm text-gray-600">Lock what's in, keep track of what waits.</p>
         </div>
 
         <Card>
@@ -45,6 +133,8 @@ function VaultPageContent() {
       </div>
     );
   }
+  
+  if (!version) return null;
 
   const data = version.data;
   const locked = version.locked;
