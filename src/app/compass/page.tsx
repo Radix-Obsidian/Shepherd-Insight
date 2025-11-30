@@ -16,6 +16,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Compass, Loader2, ArrowRight, Lightbulb, Target, Sparkles, CheckCircle } from 'lucide-react'
+import { JourneyProgress } from '@/components/journey-progress'
 
 interface ClarityOutput {
   problemStatement: string
@@ -147,6 +148,9 @@ export default function CompassPage() {
             Find Clarity
           </p>
         </div>
+
+        {/* Journey Progress */}
+        <JourneyProgress currentStep="compass" clarityId={sessionId} />
 
         {/* Input View */}
         {viewState === 'input' && (

@@ -16,6 +16,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FileText, Loader2, ArrowRight, CheckCircle2, Target, Calendar, AlertTriangle, Rocket, Download, Star } from 'lucide-react'
+import { JourneyProgress } from '@/components/journey-progress'
 
 interface UserStory {
   asA: string
@@ -196,6 +197,9 @@ export default function BlueprintPage() {
             Build With Purpose
           </p>
         </div>
+
+        {/* Journey Progress */}
+        <JourneyProgress currentStep="blueprint" clarityId={clarityId} researchId={researchId} />
 
         {/* Loading State */}
         {viewState === 'loading' && (

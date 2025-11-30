@@ -16,6 +16,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, Loader2, ArrowRight, Users, Heart, Zap, Target, Lightbulb, AlertCircle } from 'lucide-react'
+import { JourneyProgress } from '@/components/journey-progress'
 
 interface Persona {
   name: string
@@ -162,6 +163,9 @@ export default function MusePage() {
             Understand Deeply
           </p>
         </div>
+
+        {/* Journey Progress */}
+        <JourneyProgress currentStep="muse" clarityId={clarityId} researchId={sessionId} />
 
         {/* Loading Clarity State */}
         {viewState === 'loading-clarity' && (
