@@ -36,8 +36,15 @@ export async function middleware(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Protected routes
-  const protectedRoutes = ['/intake', '/insight', '/vault', '/mindmap', '/exports', '/dashboard']
+  // Protected routes - The Shepherd Journey + Legacy
+  const protectedRoutes = [
+    // New Shepherd Journey
+    '/compass', '/muse', '/blueprint',
+    // Legacy (to be deprecated)
+    '/intake', '/insight', '/vault', '/mindmap', '/exports', 
+    // Dashboard
+    '/dashboard'
+  ]
   const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
   if (isProtectedRoute && !session) {
@@ -48,5 +55,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/intake', '/insight', '/vault', '/mindmap', '/exports', '/dashboard']
+  matcher: [
+    // New Shepherd Journey
+    '/compass', '/muse', '/blueprint',
+    // Legacy
+    '/intake', '/insight', '/vault', '/mindmap', '/exports', 
+    // Dashboard
+    '/dashboard'
+  ]
 }

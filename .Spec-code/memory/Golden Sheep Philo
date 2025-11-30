@@ -1,0 +1,204 @@
+GOLDEN SHEEP AI DEVELOPMENT METHODOLOGY™
+
+"Start with the customer. Work backwards to the technology. Build narrow. Test deep. Ship confidently."
+
+---
+
+## 🐑 THE STEVE JOBS FOUNDATION
+
+Before any pillar. Before any code. Before any architecture.
+
+> *"You've got to start with the customer experience and work backwards to the technology. You can't start with the technology and try to figure out where you're going to try and sell it."*
+> — Steve Jobs
+
+This is the Golden Sheep AI north star. Every decision — every feature, every slice, every line of code — begins with one question:
+
+**"What incredible benefit are we giving to the customer? Where are we taking them?"**
+
+We don't start with what technology we have. We don't start with what's impressive to engineers. We don't start with what's trending in AI.
+
+We start with the human. We start with their pain. We start with their transformation.
+
+The technology exists to serve the experience — never the other way around.
+
+---
+
+## THE CUSTOMER-BACKWARDS DEVELOPMENT CYCLE
+
+Before entering any technical phase, answer these questions in order:
+
+1. **Who is the human we're serving?** (Not a persona. A real human with real frustration.)
+2. **What transformation do they need?** (From → To. Confusion → Clarity. Overwhelmed → Empowered.)
+3. **What does the ideal experience feel like?** (Describe it in emotional terms, not technical terms.)
+4. **What is the simplest path to that feeling?** (Remove everything unnecessary.)
+5. **Now — what technology serves this?** (Only now do we discuss tools, APIs, and architectures.)
+
+This is Customer-Backwards Development™. It precedes all other methodology.
+
+---
+
+## THE SEVEN PILLARS
+
+Once the customer experience is defined, we execute with precision.
+
+### 🟡 1. Vertical Slice Delivery (VSD)™
+
+**"Build one thin slice of the whole system — end-to-end — before touching anything else."**
+
+Build from UI → logic → AI workflows → data layer → deployment validation in one shot. No placeholder logic. Every function real. Each slice demoable to a user the same day.
+
+**Golden Sheep Difference:**
+- Every slice includes AI interaction flows (real model calls, not mocked)
+- Agent reasoning included if multi-agent architecture applies
+- No fake data, no TODOs, no "fix later"
+- AI references official documentation via web search to avoid hallucinated code
+- Each slice is a micro-MVP — tested and validated before complexity grows
+
+**Why it works:**
+Eliminates "we'll integrate it later" failures, late-found architectural contradictions, AI model mismatches, and blind debugging months deep.
+
+---
+
+### 🟡 2. Full-Stack Reality Testing (FSRT)™
+
+**"Test everything the way users will experience it — at every slice."**
+
+Real-world testing from day one. Not theoretical correctness.
+
+**Test every layer:**
+- **UI Layer** — Does UI behave with real AI responses, not mocked?
+- **Business Logic + AI Logic** — Are agent flows stable across model outputs?
+- **Prompt + Model Response** — Are prompts deterministic across providers?
+- **API Layer** — Is each agent call, action, or service stable?
+- **Database Layer** — Does model output match expected schemas?
+- **Deployment Layer** — Does the slice work deployed, not just localhost?
+
+**Golden Sheep Twist:**
+Test AI hallucination resistance, edge-case prompt injection, provider inconsistencies (Claude vs GPT vs Llama), rate limit behavior, cold-start behavior.
+
+None of this exists in traditional testing. For AI-native systems, it's non-negotiable.
+
+---
+
+### 🟡 3. Iterative AI Refactoring (AIR)™
+
+**"After each slice, the AI rewrites the code with global context."**
+
+Most dev teams push code and move on. Golden Sheep requires:
+- AI-assisted refactoring after each slice
+- Documentation regeneration with latest context
+- Pattern alignment (naming, architecture, file consistency)
+- Automatic search for official best practices
+- Test regeneration for changed flows
+
+This keeps the codebase clean, coherent, and scalable while moving fast.
+
+---
+
+### 🟡 4. Evidence-Driven Debugging (EDD)™
+
+**"Never debug blind. Always validate with official documentation + reproducible scenarios."**
+
+Golden Sheep AI requires ALWAYS checking:
+- Official documentation
+- GitHub issues
+- Known bug patterns
+- Similar architectures in the wild
+- Scenario-focused reproduction
+
+**We never wire or integrate blindly with third-party services.**
+
+We never make up implementation approaches. We use battle-tested resolutions from official docs. Because if we guess — it won't work.
+
+EDD eliminates hallucinated fixes and ensures bugs are solved with industry-confirmed methods.
+
+Your AI cannot "guess." It must verify.
+
+---
+
+### 🟡 5. Zero-Placeholder Policy (ZPP)™
+
+**"No fake data. No TODOs. No 'fix later'. No ghost features."**
+
+Every vertical slice must include:
+- Real functionality
+- Real API hits
+- Real prompts
+- Real database writes
+- Real UI interactions
+- Real deployment validation
+
+There is no "temporary" logic — because temporary code becomes permanent debt.
+
+Golden Sheep products outperform because everything is real from day one.
+
+---
+
+### 🟡 6. AI Companion Verification (ACV)™
+
+**"Every slice must be verifiable by an AI agent — not just a human."**
+
+This is the AI-native advantage. Development is built so agents can:
+- Read the code
+- Understand the architecture
+- Generate missing tests
+- Predict failure modes
+- Propose refactors
+- Improve prompts or flows
+- Detect architectural drift
+
+ACV means building software AI can maintain, not just humans. This is the future of software development.
+
+---
+
+### 🟡 7. Golden Finish Line (GFL)™
+
+**"When the slice works for one user, deploy it. Make it real."**
+
+At the end of each slice:
+- The feature ships
+- Deployment is tested
+- Performance is verified
+- Logs are monitored
+- Real human feedback is collected
+- The AI reviews and audits the codebase
+
+This cycle continues until the entire product is built in working layers, not theoretical ones.
+
+---
+
+## 🐑 THE GOLDEN SHEEP AI PHILOSOPHY STATEMENT
+
+**"Start with the customer. Work backwards to the technology."**
+
+Then:
+- Don't build wide. Build deep.
+- Don't build later. Build now.
+- Every feature is a mini-MVP.
+- Every layer must be real.
+- Every integration must use official documentation.
+- Every error must be researched and verified.
+- Every iteration must be AI-reviewed.
+- Every slice must ship.
+
+This is Customer-Backwards Development, evolved for AI-native engineering.
+
+This is Golden Sheep AI Methodology™.
+
+---
+
+## THE NON-NEGOTIABLES
+
+1. **Official Documentation Always** — We never integrate blindly. Every third-party service, every API, every tool is wired using official docs and battle-tested patterns. No exceptions.
+
+2. **Customer Experience First** — Technology decisions are justified by customer benefit, not engineering elegance.
+
+3. **Real Data, Real Services** — No mocks in production slices. If you can't implement it with real services, don't build it yet.
+
+4. **Verify Before Ship** — Every slice passes reality testing before deployment.
+
+5. **AI Assists, Humans Decide** — AI handles implementation speed. Humans own strategy and quality gates.
+
+---
+
+*Golden Sheep AI — "From customer insight to shipped product, with confidence."*

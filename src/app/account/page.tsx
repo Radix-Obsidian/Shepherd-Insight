@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface User {
   id: string
@@ -24,10 +25,23 @@ export default function AccountPage() {
     confirmPassword: ''
   })
   const [error, setError] = useState<string>('')
+  const [isMounted, setIsMounted] = useState(false)
+  const supabaseRef = useRef<SupabaseClient | null>(null)
 
-  const supabase = useMemo(() => createSupabaseBrowserClient(), [])
+  // Initialize Supabase client only on client side
+  useEffect(() => {
+    setIsMounted(true)
+    try {
+      supabaseRef.current = createSupabaseBrowserClient()
+    } catch (e) {
+      setError('Configuration error: ' + (e instanceof Error ? e.message : 'Failed to initialize'))
+    }
+  }, [])
+
+  const supabase = supabaseRef.current
 
   const checkSession = useCallback(async () => {
+    if (!supabase) return
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -47,6 +61,8 @@ export default function AccountPage() {
 
   // Check session on mount
   useEffect(() => {
+    if (!supabase) return
+
     void checkSession()
 
     // Set up auth state change listener for redirects
@@ -82,6 +98,10 @@ export default function AccountPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      setError('Authentication service not initialized')
+      return
+    }
     setIsLoading(true)
     setError('')
 
@@ -114,6 +134,7 @@ export default function AccountPage() {
   }
 
   const handleSignOut = async () => {
+    if (!supabase) return
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
@@ -130,6 +151,18 @@ export default function AccountPage() {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (error) setError('')
+  }
+
+  // Show loading state while initializing on client
+  if (!isMounted) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">Account</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   if (user) {

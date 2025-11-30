@@ -6,8 +6,23 @@ import { z } from 'zod'
 import { FirecrawlClient } from '@/lib/research/firecrawl-client'
 import { GroqClient } from '@/lib/research/groq-client'
 
-const firecrawl = new FirecrawlClient()
-const groq = new GroqClient({ temperature: 0.25 })
+// Lazy-initialized clients to avoid build-time errors
+let _firecrawl: FirecrawlClient | null = null
+let _groq: GroqClient | null = null
+
+function getFirecrawl(): FirecrawlClient {
+  if (!_firecrawl) {
+    _firecrawl = new FirecrawlClient()
+  }
+  return _firecrawl
+}
+
+function getGroq(): GroqClient {
+  if (!_groq) {
+    _groq = new GroqClient({ temperature: 0.25 })
+  }
+  return _groq
+}
 
 type SourceSnippet = {
   url: string
@@ -91,7 +106,7 @@ const FeatureBenchmarkSchema = z.object({
 async function fetchSearchSnippets(query?: string, limit = 5): Promise<SourceSnippet[]> {
   if (!query) return []
   try {
-    const result = await firecrawl.search(query, { limit })
+    const result = await getFirecrawl().search(query, { limit })
     const items = Array.isArray(result?.data) ? result.data : []
     const snippets: SourceSnippet[] = []
     for (const item of items) {
@@ -120,7 +135,7 @@ async function fetchCompetitorSnippets(urls: string[]): Promise<SourceSnippet[]>
   const results = await Promise.all(
     unique.map(async url => {
       try {
-        const scraped = (await firecrawl.scrapeUrl(url, {
+        const scraped = (await getFirecrawl().scrapeUrl(url, {
           formats: ['markdown'],
           onlyMainContent: true,
         }))
@@ -214,7 +229,7 @@ Guidelines:
 - Highlight differentiation opportunities for a new entrant.
 `
 
-        const competitorData = await groq.structuredOutputWithFallback(
+        const competitorData = await getGroq().structuredOutputWithFallback(
           prompt,
           CompetitorAnalysisSchema,
           { temperature: 0.25 }
@@ -261,7 +276,7 @@ Guidelines:
 - Provide actionable recommendations for positioning.
 `
 
-        const marketResearch = await groq.structuredOutputWithFallback(
+        const marketResearch = await getGroq().structuredOutputWithFallback(
           prompt,
           MarketResearchSchema,
           { temperature: 0.2 }
@@ -319,7 +334,7 @@ Instructions:
 - Provide concrete positioning angles for a new entrant.
 `
 
-        const benchmark = await groq.structuredOutputWithFallback(
+        const benchmark = await getGroq().structuredOutputWithFallback(
           prompt,
           FeatureBenchmarkSchema,
           { temperature: 0.25 }

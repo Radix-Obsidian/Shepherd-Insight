@@ -13,7 +13,10 @@ import {
   Download, 
   User, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  Compass,
+  BookOpen,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -25,6 +28,11 @@ const navigationItems = NAVIGATION_ITEMS.map(item => ({
 // Icon mapping for navigation items
 const iconMap = {
   'Dashboard': LayoutDashboard,
+  // The Shepherd Journey
+  'Compass': Compass,
+  'Muse': BookOpen,
+  'Blueprint': FileText,
+  // Legacy
   'New Insight': Lightbulb,
   'Vault': Lock,
   'Mind Map': Network,

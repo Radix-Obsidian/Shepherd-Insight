@@ -1,0 +1,148 @@
+# Shepherd Insight — System Design Document (SDD)
+
+## Purpose
+Defines the architecture, data flow, system components, and logic of the Shepherd Insight MVP.
+
+---
+
+# 1. Architecture Overview
+
+## 1.1 Core Structure
+- **Frontend:** Next.js 14 App Router
+- **Backend:** Next.js API Routes + Supabase Edge Functions
+- **Database:** Supabase PostgreSQL
+- **AI Layer:** Groq, Firecrawl, Shepherd Engine modules
+- **Deployment:** Vercel + Supabase
+
+---
+
+# 2. Component Architecture
+
+## 2.1 Shepherd Engine (Core Intelligence Layer)
+### Modules:
+1. Insight Reasoner  
+2. Persona Synthesizer  
+3. Opportunity Scorer  
+4. Feature Mapper  
+5. MVP Prioritizer  
+6. Story Composer  
+7. Research Agent (Firecrawl + Web)
+
+### Purpose:
+Acts as an internal OS powering all three tools:
+- Clarifies ideas
+- Generates personas and insights
+- Maps features to value
+- Produces MVP scopes
+- Generates narrative and pitch materials
+
+---
+
+# 3. Tools Architecture
+
+## 3.1 Shepherd Compass
+### Input
+- Idea text
+- Target user
+
+### Output
+- Problem statement
+- JTBD
+- Value gaps
+
+### Flow
+UI → `/api/engine/clarity` → Engine → Supabase (save)
+
+---
+
+## 3.2 Shepherd Research Muse
+### Input
+- Interviews
+- Competitor content
+- Notes
+
+### Output
+- Persona
+- Pain map
+- Insight clusters
+
+### Flow
+UI → Firecrawl → `/api/engine/persona` → Engine → Database
+
+---
+
+## 3.3 Shepherd Blueprint
+### Input
+- Outputs from Compass + Muse
+
+### Output
+- MVP scope
+- Phased roadmap
+- Feature list
+- Product story
+
+### Flow
+UI → `/api/engine/mvp` → `/api/engine/narrative`
+
+---
+
+# 4. Data Model
+
+## 4.1 Tables
+### clarity_sessions
+id | user_id | idea | clarity_output | created_at
+
+shell
+Copy code
+
+### research_insights
+id | user_id | raw_data | persona | pain_clusters | created_at
+
+shell
+Copy code
+
+### blueprints
+id | user_id | mvp_scope | features | roadmap | narrative | created_at
+
+shell
+Copy code
+
+### engine_cache
+hash | response | created_at
+
+yaml
+Copy code
+
+---
+
+# 5. API Layer
+
+### `/api/engine/clarity`
+- Calls Insight Reasoner  
+- Stores clarity session
+
+### `/api/engine/persona`
+- Synthesizes persona  
+- Runs Firecrawl if needed
+
+### `/api/engine/mvp`
+- Maps features → pain → value  
+- Determines MVP scope
+
+### `/api/engine/narrative`
+- Generates final story + pitch
+
+---
+
+# 6. Security
+- RLS on all user-owned tables  
+- Rate limiting on engine endpoints  
+- Supabase service role secured in Edge only  
+- INTERNAL_API_KEY for server-to-server calls  
+
+---
+
+# 7. Performance
+- Cache engine responses  
+- Use Groq for low-latency inference  
+- Stream long responses via Next.js streaming

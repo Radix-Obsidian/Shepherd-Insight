@@ -1,0 +1,147 @@
+Perfect — we’ll go in the exact order you chose:
+**B → C → A**
+and build this like a real Golden Sheep product spec.
+
+---
+
+# 🟦 **B — Shepherd Insight: Product Architecture Diagram (Text Version)**
+
+**Phase 1 – App Dev • Phase 2 – Agent Systems • Phase 5 – Product Narrative**
+
+This is the *system-level architecture* of Shepherd Insight with the Jobs-style pivot:
+**One Engine → Three Tools → One Founder Journey.**
+
+---
+
+# **SHEPHERD INSIGHT — HIGH-LEVEL SYSTEM ARCHITECTURE**
+
+Below is the **text blueprint** you can hand to engineers, designers, or AI agents.
+
+---
+
+# **1. Shepherd Engine (Core Intelligence Layer)**
+
+### **Invisible to user — powers all three tools.**
+
+**Responsibilities:**
+
+* Problem analysis
+* JTBD extraction
+* Persona synthesis
+* Competitor clustering
+* Pain point classification
+* Evidence weighting
+* Market signal parsing
+* Feature-value mapping
+* MVP scope scoring
+* Narrative generation
+* AI reasoning orchestration
+
+**Modules inside the Engine:**
+
+1. **Insight Reasoner** – multi-step chain-of-thought evaluator
+2. **Persona Synthesizer** – user profile + emotional journey builder
+3. **Opportunity Evaluator** – scoring unmet needs
+4. **Feature Mapper** – maps features → pains → value
+5. **MVP Prioritizer** – calculates scope, effort, complexity
+6. **Narrative Composer** – story, pitch, positioning generator
+7. **Research Agent** – Firecrawl, web search, Groq-powered summaries
+
+The founder never “sees” these.
+This layer makes Shepherd magical.
+
+---
+
+# **2. Three User-Facing Tools (Apps Powered by the Engine)**
+
+---
+
+## **A. Shepherd Compass**
+
+### *Purpose: Take the founder from confusion → clarity*
+
+**Inputs:**
+
+* simple text prompt (“My idea is…”)
+* target user
+* problem description
+
+**Outputs:**
+
+* clear problem statement
+* refined target user
+* JTBD map
+* opportunity gap
+* top 3 value hypotheses
+
+**Engine modules used:**
+Insight Reasoner, Opportunity Evaluator, Persona Synthesizer
+
+---
+
+## **B. Shepherd Research Muse**
+
+### *Purpose: Understand the user and problem deeply*
+
+**Inputs:**
+
+* user interviews
+* screenshots
+* notes
+* competitor links
+* audience surveys
+
+**Outputs:**
+
+* user personas
+* emotional journey
+* pain map
+* pattern clustering
+* competitor gap table
+
+**Engine modules used:**
+Research Agent, Persona Synthesizer, Opportunity Evaluator
+
+---
+
+## **C. Shepherd Blueprint**
+
+### *Purpose: Turn clarity + research into an actual MVP plan*
+
+**Inputs:**
+
+* outputs from Compass + Muse
+* founder priorities
+
+**Outputs:**
+
+* MVP scope
+* feature list
+* phased roadmap
+* UI skeleton map
+* pitch-ready narrative
+* dev handoff (user stories, acceptance criteria)
+
+**Engine modules used:**
+Feature Mapper, MVP Prioritizer, Narrative Composer
+
+---
+
+# **3. The End-to-End Founder Journey**
+
+### Step 1 — Founder enters raw idea → Compass
+
+**They leave with clarity.**
+
+### Step 2 — They bring inputs, interviews, notes → Muse
+
+**They leave with understanding.**
+
+### Step 3 — They push “Generate Blueprint” → Blueprint
+
+**They leave with a real MVP plan.**
+
+This is clean, emotional, simple — exactly the Steve Jobs way.
+
+---
+

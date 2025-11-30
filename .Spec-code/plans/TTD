@@ -1,0 +1,121 @@
+# Shepherd Insight — Technical Task Document (TTD)
+
+## Overview
+This document breaks down the technical execution tasks required to ship the Shepherd Insight MVP:
+- Shepherd Engine
+- Shepherd Compass
+- Shepherd Research Muse
+- Shepherd Blueprint
+
+The primary goal is to turn product requirements into actionable engineering steps.
+
+---
+
+# 1. Codebase Tasks
+
+## 1.1 Project Setup
+- Initialize Next.js 14 project structure
+- Configure Supabase client + RLS policies
+- Set up environment variables via Vercel
+- Install dependencies: Groq SDK, Firecrawl client, Zustand, Tailwind
+- Implement `/api/*` routing structure
+
+---
+
+# 2. Shepherd Engine Tasks
+
+## 2.1 Engine Core
+- Create `/engine` module with orchestrator
+- Add submodules:
+  - insight-reasoner.ts
+  - persona-synth.ts
+  - opportunity-score.ts
+  - feature-mapper.ts
+  - mvp-prioritizer.ts
+  - story-composer.ts
+
+## 2.2 Engine API Endpoints
+- POST `/api/engine/clarity`
+- POST `/api/engine/persona`
+- POST `/api/engine/mvp`
+- POST `/api/engine/narrative`
+
+## 2.3 Caching Layer
+- Supabase table: `engine_cache`
+- Implement write-through caching per user idea/session
+
+---
+
+# 3. Shepherd Compass Tasks
+
+## 3.1 UI
+- `/compass` route
+- Input field for idea + user target
+- Output panel for:
+  - Problem statement
+  - JTBD
+  - Opportunity gap
+
+## 3.2 API Integration
+- POST to `/api/engine/clarity`
+- Store results in `clarity_sessions` table
+
+---
+
+# 4. Shepherd Research Muse Tasks
+
+## 4.1 UI
+- `/muse` route
+- Upload section for:
+  - Interviews
+  - Notes
+  - Competitor URLs
+
+## 4.2 Firecrawl Integration
+- Trigger Firecrawl via server call
+- Retrieve competitor insights
+
+## 4.3 Engine Integration
+- POST to `/api/engine/persona`
+- Output:
+  - Personas
+  - Pain clusters
+  - Emotional journey
+
+---
+
+# 5. Shepherd Blueprint Tasks
+
+## 5.1 UI
+- `/blueprint` route
+- Sections:
+  - MVP scope
+  - Feature list
+  - Roadmap
+  - Narrative
+
+## 5.2 Engine Integration
+- POST `/api/engine/mvp`
+- POST `/api/engine/narrative`
+- Store blueprint output in `blueprints` table
+
+---
+
+# 6. Ops & Deployment Tasks
+- Add rate limiting to all sensitive API endpoints
+- Add logging and telemetry
+- Final QA
+- Vercel production deployment
+
+---
+
+# 7. Completion Definition
+- All three tools function end-to-end
+- All engine modules respond correctly
+- Users can generate:
+  - Clarity
+  - Research insights
+  - Blueprint
+- Export functionality works (Notion/PDF)
+- App stable in Vercel + Supabase
+

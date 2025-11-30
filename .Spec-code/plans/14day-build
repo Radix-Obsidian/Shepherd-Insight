@@ -1,0 +1,237 @@
+# 🟧 **C — Shepherd Insight MVP Build Plan (14 Days)**
+
+**Phase 1 – App Development • Phase 2 – Agent Building • Phase 3 – Production Readiness**
+
+This is the **leanest, clearest, no-bullshit** plan to ship the *new, Steve-Jobs-aligned MVP* built around:
+
+1. **Shepherd Compass**
+2. **Shepherd Research Muse**
+3. **Shepherd Blueprint**
+4. **The Shepherd Engine (unified AI core)**
+
+This plan fits perfectly with your stack:
+**Next.js 14 • Supabase • Groq • Firecrawl • Vercel**
+
+Let’s build like a real startup shipping under pressure.
+
+---
+
+# 🚀 **14-Day MVP Build Plan**
+
+> **Goal:** Deliver a fully working, end-to-end MVP founders can use to turn an idea → blueprint.
+
+Everything below is realistic, scoped, and shippable by a *solo founder using Cursor + AI agents*.
+No fantasy. No corporate BS. Just execution.
+
+---
+
+# 🔥 **WEEK 1 — Build the Engine + Compass (Clarity)**
+
+---
+
+## **Day 1 — Architecture Setup**
+
+* Create `apps/engine` folder inside repo
+
+* Define modules:
+
+  * `insight-reasoner.ts`
+  * `persona-synth.ts`
+  * `opportunity-score.ts`
+  * `feature-mapper.ts`
+  * `mvp-prioritizer.ts`
+  * `story-composer.ts`
+
+* Central orchestrator:
+  `engine/index.ts`
+
+* Add unified type system in `/types/engine.ts`
+
+**Output:** The “Shepherd Engine” skeleton exists.
+
+---
+
+## **Day 2 — Build Insight Reasoner**
+
+* Takes raw idea input
+* Clarifies: problem → user → JTBD
+* Uses Groq / Llama for speed + cost savings
+* Add test prompts for consistency
+* Add caching in Supabase (`engine_cache` table)
+
+**Output:** Engine can convert an idea → structured clarity.
+
+---
+
+## **Day 3 — Build Shepherd Compass UI**
+
+* `/compass` route
+* Clean Steve-Jobs layout (big input, simple flow)
+* Add “Your Clarity Map” panel
+* Integrate engine → Next.js API route
+* Store “Compass sessions” per user in Supabase
+
+**Output:** Compass is fully functional end-to-end.
+
+---
+
+## **Day 4 — Persona Synthesizer Module**
+
+* Takes interviews, notes, competitor links
+* Outputs persona + emotional journey + pain map
+* Firecrawl integration (competitor data ingestion)
+* Add “insight compression” logic for noisy inputs
+
+**Output:** Engine can generate personas from messy data.
+
+---
+
+## **Day 5 — Build Research Muse UI**
+
+* `/muse` route
+* Upload textarea, interview importer, competitor links
+* Show persona, pain clusters, insight list
+* Store results in Supabase `research_insights` table
+
+**Output:** Muse works fully with real data.
+
+---
+
+## **Day 6 — Opportunity Scoring + Feature Mapper**
+
+* Score user pains (frequency × intensity × unmet need)
+* Map potential features to real pains
+* Add simple *“effort score”* for dev complexity
+* This becomes the MVP prioritizer’s foundation
+
+**Output:** Engine can evaluate which features matter.
+
+---
+
+## **Day 7 — Internal QA / Fixing**
+
+* Run 10–15 mock ideas end-to-end
+* Ensure the journey Compass → Muse feels natural
+* Remove friction, simplify flows
+* Add loading states + UX polish (Jobs mindset)
+
+**Output:** Week 1 complete — Engine + 2 tools working.
+
+---
+
+# ⚡️ **WEEK 2 — Build Blueprint (MVP Plan) + Polish**
+
+---
+
+## **Day 8 — MVP Prioritizer Module**
+
+* Takes feature-pain map
+* Scores every feature
+* Selects **“Top 5 MVP essentials”**
+* Generates phases: Core → Nice-to-have → Backlog
+
+**Output:** Engine can decide MVP scope automatically.
+
+---
+
+## **Day 9 — Story Composer (Narrative Engine)**
+
+This is where your product becomes **premium**.
+
+Generates:
+
+* problem narrative
+* user story
+* product value story
+* pitch-ready explanation
+* simple “How it works” outline
+* 1-minute investor script
+
+**Output:** Blueprint will generate investor-level clarity.
+
+---
+
+## **Day 10 — Build Shepherd Blueprint UI**
+
+* `/blueprint` route
+
+* A clean layout with sections:
+
+  1. MVP Scope
+  2. Features
+  3. Roadmap
+  4. Narrative
+  5. Dev handoff
+
+* Add “Export as PDF / Notion”
+
+* Store outputs in Supabase `blueprints`
+
+**Output:** Blueprint UI is working end-to-end.
+
+---
+
+## **Day 11 — Connect All Three Tools**
+
+Create a unified navigation flow:
+
+1. Compass → “Continue to Research Muse”
+2. Muse → “Continue to Blueprint”
+3. Blueprint → Export
+
+Add a sidebar showing steps:
+
+* Idea
+* Research
+* Blueprint
+
+**Output:** The MVP has a complete funnel.
+
+---
+
+## **Day 12 — Performance + Stability**
+
+* Add rate limits
+* Add Supabase RLS rules
+* Add basic analytics (“completion rates”)
+* Add loading skeletons (Apple-like smoothness)
+
+**Output:** MVP is production-ready.
+
+---
+
+## **Day 13 — Demo Mode + Seed Content**
+
+* Add 3 demo projects:
+
+  * “Marketplace Idea”
+  * “AI Tool Idea”
+  * “Fitness App Idea”
+
+Shows new users what’s possible instantly.
+
+**Output:** Demo mode increases conversions.
+
+---
+
+## **Day 14 — Final QA + Ship to Vercel**
+
+* Full regression test
+* Firecrawl tests
+* Authentication flow
+* Export flows
+* Dark mode (optional but nice)
+* Push to main → Production build
+
+**Output:** MVP launched.
+
+---
+
+# 🐐 **Founder Takeaways**
+
+* This is the cleanest, fastest path to shipping a fundable MVP.
+* The MVP is opinionated, simple, emotional — Jobs philosophy.
+* You’ll have a *cohesive product*, not a random tool collection.
+* You’ll be ready for early users, YC, pre-seed, and social launch.
+
+

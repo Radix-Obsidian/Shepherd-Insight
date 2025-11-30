@@ -5,7 +5,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { GroqClient } from '@/lib/research/groq-client'
 
-const groq = new GroqClient({ temperature: 0.2 })
+// Lazy-initialized client to avoid build-time errors
+let _groq: GroqClient | null = null
+
+function getGroq(): GroqClient {
+  if (!_groq) {
+    _groq = new GroqClient({ temperature: 0.2 })
+  }
+  return _groq
+}
 
 const AnalysisSchema = z.object({
   summary: z.string(),
@@ -127,7 +135,7 @@ ${context}
 
 Focus on actionable insight for a founding team. Keep answers concise but specific.
 `;
-        const analysis = await groq.structuredOutputWithFallback(prompt, AnalysisSchema, {
+        const analysis = await getGroq().structuredOutputWithFallback(prompt, AnalysisSchema, {
           temperature: 0.25,
         })
         return NextResponse.json({
@@ -144,7 +152,7 @@ ${context}
 
 Return JSON that follows the schema. Each list should contain specific, non-generic guidance.
 `;
-        const insights = await groq.structuredOutputWithFallback(prompt, InsightSchema, {
+        const insights = await getGroq().structuredOutputWithFallback(prompt, InsightSchema, {
           temperature: 0.2,
         })
         return NextResponse.json({
@@ -168,7 +176,7 @@ ${context}
 
 Return JSON adhering to the schema. For priority, assign "High" to core MVP differentiators, "Medium" to supportive elements, and "Low" only when an enhancement stretches beyond MVP scope.
 `;
-        const enhanced = await groq.structuredOutputWithFallback(prompt, EnhancedFeatureSchema, {
+        const enhanced = await getGroq().structuredOutputWithFallback(prompt, EnhancedFeatureSchema, {
           temperature: 0.3,
         })
         return NextResponse.json({
