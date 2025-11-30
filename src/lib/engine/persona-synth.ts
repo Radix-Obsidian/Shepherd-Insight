@@ -8,7 +8,7 @@
  */
 
 import { jsonCompletion, completionWithFallback, type ChatMessage } from './groq-client'
-import type { ClarityOutput, ResearchOutput, Persona, PainPoint } from './types'
+import type { ClarityOutput, ResearchOutput } from './types'
 import { FirecrawlClient } from '@/lib/research/firecrawl-client'
 
 const PERSONA_SYSTEM_PROMPT = `You are the Shepherd Insight Persona Synthesizer, an expert user researcher who transforms raw research into deep human understanding.

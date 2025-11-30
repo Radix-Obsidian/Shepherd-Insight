@@ -15,7 +15,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FileText, Loader2, ArrowRight, CheckCircle2, Target, Calendar, AlertTriangle, Rocket, Download, Star } from 'lucide-react'
+import { FileText, Loader2, Target, Rocket, CheckCircle2, Calendar, AlertTriangle, Download, Star } from 'lucide-react'
 import { JourneyProgress } from '@/components/journey-progress'
 
 interface UserStory {
@@ -61,7 +61,7 @@ export default function BlueprintPage() {
 
   const [viewState, setViewState] = useState<ViewState>('loading')
   const [blueprint, setBlueprint] = useState<BlueprintOutput | null>(null)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [, setSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [expandedFeature, setExpandedFeature] = useState<number | null>(null)
 

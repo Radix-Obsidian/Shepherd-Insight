@@ -290,7 +290,7 @@ export default function MusePage() {
                   Users Discovered
                 </h2>
                 <p className="text-green-700">
-                  Here's who you're building for and what they need
+                  Here&apos;s who you&apos;re building for and what they need
                 </p>
               </div>
             </div>
@@ -315,7 +315,7 @@ export default function MusePage() {
                     </div>
                     
                     <blockquote className="italic text-slate-600 border-l-4 border-indigo-200 pl-4 mb-4">
-                      "{persona.quote}"
+                      &quot;{persona.quote}&quot;
                     </blockquote>
                     
                     <div className="space-y-3">

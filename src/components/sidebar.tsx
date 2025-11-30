@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import { APP_NAME, APP_TAGLINE, NAVIGATION_ITEMS } from '@/lib/constants'
 import { 
   LayoutDashboard, 
-  Lightbulb, 
   Lock, 
   Network, 
   Download, 

@@ -10,7 +10,7 @@
  * - Clear output showing the transformation
  * - Obvious next step
  * 
- * Customer Transformation: "I don't know where to start" → "I have clarity"
+ * Customer Transformation: "I&apos;m feeling a bit lost with where to start..." → "I have clarity"
  */
 
 import { useState } from 'react'

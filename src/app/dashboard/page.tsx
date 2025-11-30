@@ -54,7 +54,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Your Projects</h2>
-          <p className="text-sm text-gray-600">Each project is an idea you're shaping.</p>
+          <p className="text-sm text-gray-600">Each project is an idea you&apos;re shaping.</p>
         </div>
         <Link href="/compass">
           <Button>+ Start a New Idea</Button>
@@ -64,11 +64,11 @@ export default function DashboardPage() {
       {projects.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Let's start your first idea.</CardTitle>
+            <CardTitle>Let&apos;s start your first idea.</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600 mb-3">
-              We'll guide you from idea to a clear plan you can share.
+              We&apos;ll guide you from idea to a clear plan you can share.
             </p>
             <Link href="/compass">
               <Button>Start now</Button>

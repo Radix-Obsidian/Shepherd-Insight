@@ -6,7 +6,7 @@
  */
 
 import Groq from 'groq-sdk'
-import type { GroqModel, EngineConfig, DEFAULT_ENGINE_CONFIG } from './types'
+import type { GroqModel } from './types'
 
 // Singleton instance
 let groqInstance: Groq | null = null

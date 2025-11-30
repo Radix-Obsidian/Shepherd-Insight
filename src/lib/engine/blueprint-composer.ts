@@ -8,7 +8,7 @@
  */
 
 import { jsonCompletion, completionWithFallback, type ChatMessage } from './groq-client'
-import type { ClarityOutput, ResearchOutput, BlueprintOutput, MVPFeature, UserStory, RoadmapWeek } from './types'
+import type { ClarityOutput, ResearchOutput, BlueprintOutput } from './types'
 
 const BLUEPRINT_SYSTEM_PROMPT = `You are the Shepherd Insight Blueprint Composer, an expert product strategist who transforms user understanding into actionable build plans.
 

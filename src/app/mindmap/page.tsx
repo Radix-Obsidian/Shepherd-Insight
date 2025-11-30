@@ -17,7 +17,7 @@ import { MindMapBuilder } from '@/components/mindmap/MindMapBuilder'
 import { Toolbar } from '@/components/mindmap/Toolbar'
 import { AIControls } from '@/components/mindmap/AIControls'
 import { useMindMapStore } from '@/lib/mindmap/store'
-import { Network, Compass, Sparkles } from 'lucide-react'
+import { Compass, Sparkles } from 'lucide-react'
 
 function MindMapPageContent() {
   const searchParams = useSearchParams()

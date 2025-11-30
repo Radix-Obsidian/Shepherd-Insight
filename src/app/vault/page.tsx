@@ -18,7 +18,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import VersionSwitcher from '@/components/VersionSwitcher';
 import { useAppStore } from '@/lib/store';
-import { Lock, CheckCircle2, AlertCircle, ArrowRight, Compass, BookOpen, FileText } from 'lucide-react';
+import { Lock, ArrowRight, Compass, BookOpen, FileText } from 'lucide-react';
 import { JourneyProgress } from '@/components/journey-progress';
 
 const tabs = [
@@ -33,8 +33,6 @@ function VaultPageContent() {
   const projectId = params.get('projectId') || '';
   const versionId = params.get('versionId') || '';
   const blueprintId = params.get('blueprintId') || '';
-  const clarityId = params.get('clarityId') || '';
-  const researchId = params.get('researchId') || '';
   
   const version = useAppStore(s =>
     projectId && versionId ? s.getProjectVersion(projectId, versionId) : undefined
@@ -116,7 +114,7 @@ function VaultPageContent() {
       <div className="p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Decision Vault</h1>
-          <p className="text-sm text-gray-600">Lock what's in, keep track of what waits.</p>
+          <p className="text-sm text-gray-600">Lock what&apos;s in, keep track of what waits.</p>
         </div>
 
         <Card>
