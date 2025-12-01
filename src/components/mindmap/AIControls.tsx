@@ -1,7 +1,7 @@
 'use client'
 
 import { logger } from '@/lib/logger';
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,13 +11,22 @@ import { useMindMapStore } from '@/lib/mindmap/store'
 interface AIControlsProps {
   isOpen: boolean
   onClose: () => void
+  initialText?: string
+  hasJourneyData?: boolean
 }
 
-export function AIControls({ isOpen, onClose }: AIControlsProps) {
-  const [textInput, setTextInput] = useState('')
+export function AIControls({ isOpen, onClose, initialText = '', hasJourneyData = false }: AIControlsProps) {
+  const [textInput, setTextInput] = useState(initialText)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const { importGraph } = useMindMapStore()
+
+  // Update text when initial text changes
+  useEffect(() => {
+    if (initialText) {
+      setTextInput(initialText)
+    }
+  }, [initialText])
 
   const handleGenerate = async () => {
     if (!textInput.trim() && !imageFile) return
@@ -71,18 +80,26 @@ export function AIControls({ isOpen, onClose }: AIControlsProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
         <CardHeader>
-          <CardTitle>Generate AI Mind Map</CardTitle>
+          <CardTitle>
+            {hasJourneyData ? '✨ Generate Mind Map from Your Journey' : 'Generate AI Mind Map'}
+          </CardTitle>
+          {hasJourneyData && (
+            <p className="text-sm text-muted-foreground mt-2">
+              We&apos;ve pre-loaded your journey data below. Click Generate to create your mind map, or edit the text first.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              Describe your idea or paste your Insight brief
+              {hasJourneyData ? 'Your Journey Summary' : 'Describe your idea or paste your Insight brief'}
             </label>
             <Textarea
               placeholder="e.g., 'Create a mobile app for busy parents to track their children's activities and coordinate with other parents...'"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              rows={4}
+              rows={hasJourneyData ? 12 : 4}
+              className={hasJourneyData ? 'font-mono text-sm' : ''}
             />
           </div>
 

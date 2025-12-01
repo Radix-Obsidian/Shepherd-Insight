@@ -17,23 +17,51 @@ import { MindMapBuilder } from '@/components/mindmap/MindMapBuilder'
 import { Toolbar } from '@/components/mindmap/Toolbar'
 import { AIControls } from '@/components/mindmap/AIControls'
 import { useMindMapStore } from '@/lib/mindmap/store'
+import { useAppStore } from '@/lib/store'
 import { Compass, Sparkles } from 'lucide-react'
 
 function MindMapPageContent() {
   const searchParams = useSearchParams()
   const projectId = searchParams.get('projectId')
+  const versionId = searchParams.get('versionId')
   const [isAIModalOpen, setIsAIModalOpen] = useState(false)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [journeyData, setJourneyData] = useState<string | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   
   const { loadFromLocalStorage, reset } = useMindMapStore()
+  const getProjectVersion = useAppStore(s => s.getProjectVersion)
 
-  // Load mind map data on mount
+  // Load journey data from store if available
   useEffect(() => {
-    if (projectId) {
+    if (projectId && versionId) {
+      const version = getProjectVersion(projectId, versionId)
+      if (version?.data?.journeyData) {
+        // Auto-generate summary from journey data
+        const { clarity, research, blueprint } = version.data.journeyData
+        let summary = ''
+        
+        if (clarity) {
+          summary += `Problem: ${clarity.problemStatement}\n`
+          summary += `Target User: ${clarity.targetUser}\n`
+          if (clarity.valueHypotheses?.length) {
+            summary += `\nValue Propositions:\n${clarity.valueHypotheses.map((v: string) => `- ${v}`).join('\n')}\n`
+          }
+        }
+        
+        if (research?.personas) {
+          summary += `\nUser Personas:\n${research.personas.map((p: any) => `- ${p.name} (${p.role})`).join('\n')}\n`
+        }
+        
+        if (blueprint?.features) {
+          summary += `\nKey Features:\n${blueprint.features.slice(0, 5).map((f: any) => `- ${f.name}: ${f.description}`).join('\n')}`
+        }
+        
+        setJourneyData(summary)
+      }
       loadFromLocalStorage(projectId)
     }
-  }, [projectId, loadFromLocalStorage])
+  }, [projectId, versionId, loadFromLocalStorage, getProjectVersion])
 
   const handleReset = () => {
     reset()
@@ -103,6 +131,8 @@ function MindMapPageContent() {
       <AIControls 
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
+        initialText={journeyData || ''}
+        hasJourneyData={!!journeyData}
       />
 
       {/* Reset Confirmation Modal */}

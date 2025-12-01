@@ -9,6 +9,11 @@ export interface VersionData {
   constraints: string;
   positioning?: string;
   timestampISO?: string;
+  journeyData?: {
+    clarity?: any;
+    research?: any;
+    blueprint?: any;
+  };
 }
 
 export interface LockedDecisions {
