@@ -8,50 +8,62 @@ export async function middleware(request: NextRequest) {
   if (NEXT_PUBLIC_DISABLE_AUTH) {
     return NextResponse.next()
   }
+
+  // Skip auth if Supabase is not configured
+  if (!NEXT_PUBLIC_SUPABASE_URL || !NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next()
+  }
+
   const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
 
-  const supabase = createServerClient(
-    NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() {
-          return Array.from(request.cookies.getAll()).map(cookie => ({
-            name: cookie.name,
-            value: cookie.value,
-          }))
+  try {
+    const supabase = createServerClient(
+      NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return Array.from(request.cookies.getAll()).map(cookie => ({
+              name: cookie.name,
+              value: cookie.value,
+            }))
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options)
+            })
+          },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
-          })
-        },
-      },
+      }
+    )
+
+    const { data: { session } } = await supabase.auth.getSession()
+
+    // Protected routes - The Shepherd Journey + Legacy
+    const protectedRoutes = [
+      // New Shepherd Journey
+      '/compass', '/muse', '/blueprint',
+      // Legacy (to be deprecated)
+      '/intake', '/insight', '/vault', '/mindmap', '/exports', 
+      // Dashboard
+      '/dashboard'
+    ]
+    const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
+
+    if (isProtectedRoute && !session) {
+      return NextResponse.redirect(new URL('/account', request.url))
     }
-  )
 
-  const { data: { session } } = await supabase.auth.getSession()
-
-  // Protected routes - The Shepherd Journey + Legacy
-  const protectedRoutes = [
-    // New Shepherd Journey
-    '/compass', '/muse', '/blueprint',
-    // Legacy (to be deprecated)
-    '/intake', '/insight', '/vault', '/mindmap', '/exports', 
-    // Dashboard
-    '/dashboard'
-  ]
-  const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
-
-  if (isProtectedRoute && !session) {
-    return NextResponse.redirect(new URL('/account', request.url))
+    return response
+  } catch {
+    // If session check fails, allow the request to proceed
+    // The page-level auth checks will handle it
+    return NextResponse.next()
   }
-
-  return response
 }
 
 export const config = {

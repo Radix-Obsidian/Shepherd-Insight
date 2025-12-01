@@ -6,11 +6,12 @@
  * Handles Supabase auth errors gracefully, especially refresh token issues
  */
 
-import { createSupabaseBrowserClient } from './supabase-browser'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export class AuthErrorHandler {
   private static instance: AuthErrorHandler | null = null
-  private supabase = createSupabaseBrowserClient()
+  private supabase: SupabaseClient | null = null
+  private initialized = false
 
   static getInstance(): AuthErrorHandler {
     if (!AuthErrorHandler.instance) {
@@ -19,23 +20,35 @@ export class AuthErrorHandler {
     return AuthErrorHandler.instance
   }
 
+  private async getSupabase(): Promise<SupabaseClient | null> {
+    if (!this.supabase && typeof window !== 'undefined') {
+      try {
+        // Dynamic import to avoid issues at module load time
+        const { createSupabaseBrowserClient } = await import('./supabase-browser')
+        this.supabase = createSupabaseBrowserClient()
+      } catch {
+        // Supabase not configured yet, ignore
+        return null
+      }
+    }
+    return this.supabase
+  }
+
   /**
    * Handle auth errors and attempt recovery
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async handleAuthError(error: any): Promise<void> {
-    console.warn('Auth error detected:', error)
-
     // Check if it's a refresh token error
     if (this.isRefreshTokenError(error)) {
       await this.clearAuthState()
-      // Optionally redirect to login or show a message
-      console.log('Cleared invalid auth state')
     }
   }
 
   /**
    * Check if error is related to refresh token
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private isRefreshTokenError(error: any): boolean {
     const errorMessage = error?.message?.toLowerCase() || ''
     return (
@@ -51,12 +64,14 @@ export class AuthErrorHandler {
    */
   private async clearAuthState(): Promise<void> {
     try {
-      // Sign out from Supabase (clears tokens)
-      await this.supabase.auth.signOut()
+      const supabase = await this.getSupabase()
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
       
       // Clear any auth-related localStorage items
       if (typeof window !== 'undefined') {
-        const keysToRemove = []
+        const keysToRemove: string[] = []
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i)
           if (key && (key.includes('supabase') || key.includes('auth'))) {
@@ -65,8 +80,8 @@ export class AuthErrorHandler {
         }
         keysToRemove.forEach(key => localStorage.removeItem(key))
       }
-    } catch (clearError) {
-      console.warn('Error clearing auth state:', clearError)
+    } catch {
+      // Ignore errors during cleanup
     }
   }
 
@@ -74,27 +89,27 @@ export class AuthErrorHandler {
    * Initialize auth error monitoring
    */
   initializeErrorMonitoring(): void {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || this.initialized) return
+    this.initialized = true
 
-    // Listen for Supabase auth errors
-    this.supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED' && !session) {
-        console.warn('Token refresh failed, clearing auth state')
-        this.clearAuthState()
-      }
+    // Initialize async
+    this.getSupabase().then(supabase => {
+      if (!supabase) return
+
+      // Listen for Supabase auth errors
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          this.clearAuthState()
+        }
+      })
     })
 
     // Global error handler for unhandled auth errors
     window.addEventListener('unhandledrejection', (event) => {
       if (this.isRefreshTokenError(event.reason)) {
         this.handleAuthError(event.reason)
-        event.preventDefault() // Prevent console spam
+        event.preventDefault()
       }
     })
   }
-}
-
-// Auto-initialize on client side
-if (typeof window !== 'undefined') {
-  AuthErrorHandler.getInstance().initializeErrorMonitoring()
 }
