@@ -13,10 +13,11 @@
  * Customer Transformation: "I&apos;m feeling a bit lost with where to start..." → "I have clarity"
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Compass, Loader2, ArrowRight, Lightbulb, Target, Sparkles, CheckCircle } from 'lucide-react'
+import { Compass, Loader2, ArrowRight, Lightbulb, Target, Sparkles, CheckCircle, RefreshCw } from 'lucide-react'
 import { JourneyProgress } from '@/components/journey-progress'
+import { getRotatingSuggestions, type IdeaStarter } from '@/lib/suggestions'
 
 interface ClarityOutput {
   problemStatement: string
@@ -38,35 +39,6 @@ interface ClarityResponse {
 
 type ViewState = 'input' | 'loading' | 'result'
 
-// Idea starters to help users who freeze at a blank prompt
-const IDEA_STARTERS = [
-  {
-    title: "Help busy people",
-    prompt: "I want to build an app that helps busy professionals manage their time better by automatically scheduling tasks based on energy levels and priorities",
-    audience: "Working professionals aged 25-45 who struggle with work-life balance"
-  },
-  {
-    title: "Solve a daily frustration",
-    prompt: "I'm thinking about creating a service that makes meal planning easier for families by suggesting recipes based on what's already in the fridge",
-    audience: "Parents with young children who want to eat healthier but lack time"
-  },
-  {
-    title: "Connect a community",
-    prompt: "My idea is to build a platform where local small business owners can collaborate, share resources, and refer customers to each other",
-    audience: "Small business owners in local communities"
-  },
-  {
-    title: "Simplify something complex",
-    prompt: "I want to create a tool that makes personal finance easier to understand for people who've never learned about investing or budgeting",
-    audience: "Young adults starting their first job who feel overwhelmed by money"
-  },
-  {
-    title: "Empower creators",
-    prompt: "I'm building a platform that helps independent artists sell their work directly to collectors without gallery middlemen",
-    audience: "Independent artists and art collectors"
-  },
-]
-
 export default function CompassPage() {
   const router = useRouter()
   const [viewState, setViewState] = useState<ViewState>('input')
@@ -75,8 +47,26 @@ export default function CompassPage() {
   const [clarity, setClarity] = useState<ClarityOutput | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<IdeaStarter[]>([])
 
-  const handleUseStarter = (starter: typeof IDEA_STARTERS[0]) => {
+  // Initialize and rotate suggestions every 15 seconds (avoid hydration issues)
+  useEffect(() => {
+    // Set initial suggestions on mount
+    setSuggestions(getRotatingSuggestions(3))
+
+    // Rotate suggestions every 15 seconds
+    const interval = setInterval(() => {
+      setSuggestions(getRotatingSuggestions(3))
+    }, 15000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleRefreshSuggestions = () => {
+    setSuggestions(getRotatingSuggestions(3))
+  }
+
+  const handleUseStarter = (starter: IdeaStarter) => {
     setIdea(starter.prompt)
     setTargetUser(starter.audience)
   }
@@ -174,15 +164,26 @@ export default function CompassPage() {
             </div>
 
             {/* Idea Starters - Help for blank page syndrome */}
-            {!idea && (
+            {!idea && suggestions.length > 0 && (
               <div className="pt-2">
-                <p className="text-sm font-medium text-slate-600 mb-3">
-                  Need inspiration? Try one of these:
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-slate-600">
+                    Need inspiration? Try one of these:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRefreshSuggestions}
+                    className="flex items-center gap-1 px-3 py-1 text-xs text-slate-500 hover:text-amber-600 transition-colors"
+                    title="Refresh suggestions"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    New ideas
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {IDEA_STARTERS.map((starter, index) => (
+                  {suggestions.map((starter, index) => (
                     <button
-                      key={index}
+                      key={`${starter.title}-${index}`}
                       type="button"
                       onClick={() => handleUseStarter(starter)}
                       className="px-4 py-2 text-sm bg-slate-100 hover:bg-amber-100 hover:text-amber-800 text-slate-600 rounded-full transition-colors border border-slate-200 hover:border-amber-300"
