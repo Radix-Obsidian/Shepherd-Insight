@@ -59,7 +59,7 @@ function DefaultErrorFallback({ error, resetError }: { error?: Error; resetError
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
           <p className="text-muted-foreground">
-            We encountered an unexpected error. This has been logged and we'll look into it.
+            We encountered an unexpected error. This has been logged and we&apos;ll look into it.
           </p>
           {error && (
             <details className="mt-4 p-3 bg-muted rounded-lg text-left">

@@ -64,11 +64,8 @@ function BlueprintPageContent() {
 
   const [viewState, setViewState] = useState<ViewState>('loading')
   const [blueprint, setBlueprint] = useState<BlueprintOutput | null>(null)
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
   const [versionId, setVersionId] = useState<string | null>(null)
-  const [clarity, setClarity] = useState<any>(null)
-  const [research, setResearch] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [expandedFeature, setExpandedFeature] = useState<number | null>(null)
 
@@ -107,7 +104,6 @@ function BlueprintPageContent() {
       }
 
       setBlueprint(result.data.blueprint)
-      setSessionId(result.data.sessionId)
       
       // Fetch clarity and research data for saving
       const [clarityRes, researchRes] = await Promise.all([
@@ -119,9 +115,6 @@ function BlueprintPageContent() {
       const researchData = await researchRes.json()
       
       if (clarityData.success && researchData.success) {
-        setClarity(clarityData.data.clarity)
-        setResearch(researchData.data.research)
-        
         // Auto-save journey to store for exports and vault
         const { projectId: pid, versionId: vid } = createProjectFromJourney({
           projectName: clarityData.data.clarity.problemStatement?.split(' ').slice(0, 5).join(' ') || 'My Project',
@@ -146,60 +139,6 @@ function BlueprintPageContent() {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setViewState('error')
     }
-  }
-
-  const handleExport = () => {
-    if (!blueprint) return
-    
-    // Generate markdown export
-    const markdown = generateMarkdownExport(blueprint)
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'mvp-blueprint.md'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const generateMarkdownExport = (bp: BlueprintOutput): string => {
-    let md = `# MVP Blueprint\n\n`
-    md += `## Product Vision\n${bp.productVision}\n\n`
-    md += `## MVP Scope\n${bp.mvpScope}\n\n`
-    md += `## Core Value\n${bp.coreValue}\n\n`
-    
-    md += `## Features\n\n`
-    bp.features.forEach((f, i) => {
-      md += `### ${i + 1}. ${f.name} [${f.priority}]\n`
-      md += `${f.description}\n\n`
-      md += `**Effort:** ${f.effort}\n\n`
-      md += `**User Stories:**\n`
-      f.userStories.forEach(s => {
-        md += `- As a ${s.asA}, I want ${s.iWant}, so that ${s.soThat}\n`
-      })
-      md += `\n`
-    })
-    
-    md += `## Roadmap\n\n`
-    bp.roadmap.forEach(w => {
-      md += `### Week ${w.week}: ${w.theme}\n`
-      md += `**Goals:** ${w.goals.join(', ')}\n\n`
-      md += `**Deliverables:**\n`
-      w.deliverables.forEach(d => md += `- ${d}\n`)
-      md += `\n`
-    })
-    
-    md += `## Success Metrics\n\n`
-    bp.successMetrics.forEach(m => {
-      md += `- **${m.metric}:** ${m.target} (${m.why})\n`
-    })
-    
-    md += `\n## Launch Checklist\n\n`
-    bp.launchChecklist.forEach(item => {
-      md += `- [ ] ${item}\n`
-    })
-    
-    return md
   }
 
   const handleStartOver = () => {

@@ -32,10 +32,6 @@ export function UpgradeBanner() {
     { name: 'Blueprint', remaining: remaining.blueprint, total: FREE_LIMITS.blueprintsPerMonth },
   ]
 
-  const mostDepleted = usageItems.reduce((min, item) => 
-    (item.remaining / item.total) < (min.remaining / min.total) ? item : min
-  )
-
   const allUsed = usageItems.every(item => item.remaining <= 0)
 
   if (allUsed) {

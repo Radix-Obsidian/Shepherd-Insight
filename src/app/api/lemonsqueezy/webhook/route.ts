@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
   const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET
 
   if (!secret) {
+    // eslint-disable-next-line no-console
     console.error('LEMONSQUEEZY_WEBHOOK_SECRET not configured')
     return NextResponse.json(
       { error: 'Webhook secret not configured' },
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
   )
 
   if (!crypto.timingSafeEqual(hmac, signature)) {
+    // eslint-disable-next-line no-console
     console.error('Invalid webhook signature')
     return NextResponse.json(
       { error: 'Invalid signature' },
@@ -107,7 +109,8 @@ export async function POST(request: NextRequest) {
   const userId = data.meta.custom_data?.user_id
   const attributes = data.data.attributes
 
-  console.log(`📬 Lemon Squeezy webhook: ${eventName}`, {
+  // eslint-disable-next-line no-console
+  console.log('📬 Lemon Squeezy webhook received:', eventName, {
     userId,
     email: attributes.user_email,
     status: attributes.status,
@@ -120,12 +123,14 @@ export async function POST(request: NextRequest) {
       case 'subscription_resumed':
       case 'subscription_unpaused':
         // User upgraded to Pro
+        // eslint-disable-next-line no-console
         console.log(`✅ User ${userId} subscribed: ${attributes.status}`)
         // TODO: Update user subscription in Supabase
         // await updateUserTier(userId, 'pro', attributes)
         break
 
       case 'subscription_updated':
+        // eslint-disable-next-line no-console
         console.log(`📝 User ${userId} subscription updated: ${attributes.status}`)
         // TODO: Sync subscription status
         break
@@ -133,29 +138,34 @@ export async function POST(request: NextRequest) {
       case 'subscription_cancelled':
       case 'subscription_expired':
         // User downgraded
+        // eslint-disable-next-line no-console
         console.log(`❌ User ${userId} subscription ended: ${attributes.status}`)
         // TODO: Downgrade user to free tier
         // await updateUserTier(userId, 'free', attributes)
         break
 
       case 'subscription_paused':
+        // eslint-disable-next-line no-console
         console.log(`⏸️ User ${userId} subscription paused`)
         // TODO: Handle paused state
         break
 
       case 'order_created':
         // Could be lifetime deal
+        // eslint-disable-next-line no-console
         console.log(`🎉 Order created for user ${userId}`)
         // TODO: Check if lifetime and update accordingly
         break
 
       default:
+        // eslint-disable-next-line no-console
         console.log(`Unhandled event: ${eventName}`)
     }
 
     // Always return 200 quickly per Lemon Squeezy docs
     return NextResponse.json({ received: true }, { status: 200 })
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error processing webhook:', error)
     // Still return 200 to prevent retries, log error for debugging
     return NextResponse.json({ received: true, error: 'Processing error' }, { status: 200 })
