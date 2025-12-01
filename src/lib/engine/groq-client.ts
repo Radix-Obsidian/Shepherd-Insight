@@ -8,21 +8,33 @@
 import Groq from 'groq-sdk'
 import type { GroqModel } from './types'
 
-// Singleton instance
+// Cache for current API key to detect changes
+let cachedApiKey: string | null = null
 let groqInstance: Groq | null = null
 
 /**
  * Get or create Groq client instance
  * Uses GROQ_API_KEY from environment (official pattern)
+ * Re-creates client if API key changes (handles env var updates in serverless)
  */
 function getGroqClient(): Groq {
-  if (!groqInstance) {
-    const apiKey = process.env.GROQ_API_KEY
-    if (!apiKey) {
-      throw new Error('GROQ_API_KEY environment variable is required')
-    }
+  const apiKey = process.env.GROQ_API_KEY
+  
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY environment variable is required')
+  }
+  
+  // Validate key format (Groq keys start with 'gsk_')
+  if (!apiKey.startsWith('gsk_')) {
+    throw new Error('Invalid GROQ_API_KEY format - should start with gsk_')
+  }
+  
+  // Re-create client if key changed or doesn't exist
+  if (!groqInstance || cachedApiKey !== apiKey) {
+    cachedApiKey = apiKey
     groqInstance = new Groq({ apiKey })
   }
+  
   return groqInstance
 }
 

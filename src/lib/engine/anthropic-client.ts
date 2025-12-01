@@ -18,19 +18,32 @@ export type ClaudeModel =
   | 'claude-3-5-sonnet-20241022'    // FALLBACK 1: Strong reasoning
   | 'claude-3-haiku-20240307'       // FALLBACK 2: Fast but empathetic
 
+// Cache for current API key to detect changes
+let cachedAnthropicKey: string | null = null
 let anthropicInstance: Anthropic | null = null
 
 /**
  * Get or create Anthropic client
+ * Re-creates client if API key changes (handles env var updates in serverless)
  */
 function getAnthropicClient(): Anthropic {
-  if (!anthropicInstance) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY not configured in environment')
-    }
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY not configured in environment')
+  }
+  
+  // Validate key format (Anthropic keys start with 'sk-ant-')
+  if (!apiKey.startsWith('sk-ant-')) {
+    throw new Error('Invalid ANTHROPIC_API_KEY format - should start with sk-ant-')
+  }
+  
+  // Re-create client if key changed or doesn't exist
+  if (!anthropicInstance || cachedAnthropicKey !== apiKey) {
+    cachedAnthropicKey = apiKey
     anthropicInstance = new Anthropic({ apiKey })
   }
+  
   return anthropicInstance
 }
 
