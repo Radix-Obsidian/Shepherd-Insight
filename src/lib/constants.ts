@@ -1,6 +1,6 @@
 // App constants
-export const APP_NAME = 'Shepherd Insight'
-export const APP_TAGLINE = 'From idea to clarity in minutes.'
+export const APP_NAME = 'ShepLight'
+export const APP_TAGLINE = 'Light the way from idea to launch.'
 
 // Navigation items - The Shepherd Journey
 export const NAVIGATION_ITEMS = [
