@@ -8,6 +8,7 @@ export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY |
 
 // AI/External Services
 export const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
+export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || ''
 export const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || ''
 
 // Development/Production flags

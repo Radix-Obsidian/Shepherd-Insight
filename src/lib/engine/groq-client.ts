@@ -93,21 +93,57 @@ export async function jsonCompletion<T>(
 
 /**
  * Generate completion with automatic model fallback
- * Tries production models in order until one succeeds
+ * 
+ * Steve Jobs: "Start with customer experience and work backwards."
+ * 
+ * PRIMARY: Claude (best customer understanding)
+ * FALLBACK: Groq (fast and reliable)
  */
 export async function completionWithFallback<T>(
   messages: ChatMessage[],
-  options: Omit<CompletionOptions, 'model'> = {},
+  options: Omit<CompletionOptions, 'model'> & { systemPrompt?: string } = {},
   parseAsJson = false
 ): Promise<T | string> {
+  let lastError: Error | null = null
+
+  // PRIMARY: Try Claude first (best customer experience)
+  try {
+    const { isAnthropicAvailable, claudeCompletionWithFallback } = await import('./anthropic-client')
+    
+    if (isAnthropicAvailable()) {
+      console.log('🎯 Using Claude (PRIMARY) - Best customer experience')
+      
+      // Convert Groq message format to Claude format
+      const systemMessage = messages.find(m => m.role === 'system')
+      const userMessages = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }))
+
+      const claudeOptions = {
+        temperature: options.temperature,
+        maxTokens: options.maxTokens,
+        systemPrompt: systemMessage?.content || options.systemPrompt,
+      }
+
+      return await claudeCompletionWithFallback<T>(userMessages, claudeOptions, parseAsJson)
+    }
+  } catch (claudeError) {
+    lastError = claudeError instanceof Error ? claudeError : new Error(String(claudeError))
+    console.warn('⚡ Claude unavailable, falling back to Groq:', lastError.message)
+  }
+
+  // FALLBACK: Use Groq if Claude unavailable
+  console.log('⚡ Using Groq (FALLBACK)')
+  
   const models: GroqModel[] = [
     'llama-3.3-70b-versatile',
     'openai/gpt-oss-120b',
     'openai/gpt-oss-20b',
     'llama-3.1-8b-instant',
   ]
-
-  let lastError: Error | null = null
 
   for (const model of models) {
     try {
@@ -118,11 +154,11 @@ export async function completionWithFallback<T>(
       }
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      console.warn(`Model ${model} failed, trying next:`, lastError.message)
+      console.warn(`Groq model ${model} failed:`, lastError.message)
     }
   }
 
-  throw lastError || new Error('All models failed')
+  throw lastError || new Error('All AI providers failed. Please check your API keys.')
 }
 
 /**
