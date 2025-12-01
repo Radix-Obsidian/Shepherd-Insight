@@ -6,8 +6,31 @@ import { APP_NAME } from '@/lib/constants'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: 'From idea to clarity in minutes.',
+  title: `${APP_NAME} - Light the Way to Your MVP`,
+  description: 'Got an idea brewing? Transform it into a clear vision, real personas, and an actionable plan. No more guessing—just clarity.',
+  keywords: [
+    'MVP planning',
+    'startup ideas',
+    'product clarity',
+    'user personas',
+    'founder tools',
+    'idea validation',
+    'product-market fit',
+    'startup journey',
+  ],
+  authors: [{ name: 'Golden Sheep AI' }],
+  creator: 'Golden Sheep AI',
+  openGraph: {
+    title: `${APP_NAME} - Light the Way to Your MVP`,
+    description: 'Transform your idea into clarity, personas, and an actionable MVP plan in minutes.',
+    type: 'website',
+    siteName: APP_NAME,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${APP_NAME} - Light the Way to Your MVP`,
+    description: 'Transform your idea into clarity, personas, and an actionable MVP plan in minutes.',
+  },
 }
 
 export default function RootLayout({
