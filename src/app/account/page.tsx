@@ -77,14 +77,9 @@ export default function AccountPage() {
         setFormData({ email: '', password: '', confirmPassword: '' })
         setIsLoading(false)
         setError('')
-
-        if (
-          typeof window !== 'undefined' &&
-          window.location.pathname !== '/dashboard' &&
-          window.location.pathname !== '/account'
-        ) {
-          router.push('/dashboard')
-        }
+        
+        // Refresh router to sync server-side session state with cookies
+        router.refresh()
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
         setIsLoading(false)

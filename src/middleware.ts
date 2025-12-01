@@ -14,10 +14,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  let response = NextResponse.next({
+    request,
   })
 
   try {
@@ -27,12 +25,18 @@ export async function middleware(request: NextRequest) {
       {
         cookies: {
           getAll() {
-            return Array.from(request.cookies.getAll()).map(cookie => ({
-              name: cookie.name,
-              value: cookie.value,
-            }))
+            return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
+            // Update request cookies for downstream
+            cookiesToSet.forEach(({ name, value }) => {
+              request.cookies.set(name, value)
+            })
+            // Create new response with updated request
+            response = NextResponse.next({
+              request,
+            })
+            // Set cookies on response
             cookiesToSet.forEach(({ name, value, options }) => {
               response.cookies.set(name, value, options)
             })
@@ -41,7 +45,9 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    const { data: { session } } = await supabase.auth.getSession()
+    // Use getUser() instead of getSession() - it validates with Supabase server
+    // This also refreshes the session if needed and updates cookies
+    const { data: { user }, error } = await supabase.auth.getUser()
 
     // Protected routes - The Shepherd Journey + Legacy
     const protectedRoutes = [
@@ -54,8 +60,9 @@ export async function middleware(request: NextRequest) {
     ]
     const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
-    if (isProtectedRoute && !session) {
-      return NextResponse.redirect(new URL('/account', request.url))
+    if (isProtectedRoute && (!user || error)) {
+      const redirectUrl = new URL('/account', request.url)
+      return NextResponse.redirect(redirectUrl)
     }
 
     return response
