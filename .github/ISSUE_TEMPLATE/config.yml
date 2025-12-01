@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Start a Discussion
+    url: https://github.com/Radix-Obsidian/Shepherd-Insight/discussions/new
+    about: For questions, ideas, or general chat — start a discussion instead of an issue!
+  - name: 📖 Documentation
+    url: https://github.com/Radix-Obsidian/Shepherd-Insight/tree/main/docs
+    about: Check the docs — your answer might already be there!
+  - name: 🗺️ Roadmap
+    url: https://github.com/Radix-Obsidian/Shepherd-Insight#-roadmap
+    about: See what's planned for future releases

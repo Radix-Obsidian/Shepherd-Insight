@@ -1,99 +1,141 @@
-# Shepherd Insight - Architecture Documentation
+# ShepLight — Architecture Documentation
+
+> Technical architecture and design decisions for the ShepLight platform.
 
 ## Overview
 
-Shepherd Insight is a Next.js 14 application that helps users transform ideas into actionable insights. The platform provides tools for gathering requirements, generating insights, and managing project knowledge.
+ShepLight is a Next.js 14 application that guides founders through the UX research process using AI. The platform implements the **Shepherd Journey** — a 3-step flow from idea clarity to actionable MVP blueprint.
+
+### Design Philosophy
+
+We follow the **Golden Sheep AI Methodology**:
+
+1. **Customer-Backwards Design** — Start with user transformation, work backwards to technology
+2. **Vertical Slice Delivery** — Build complete features end-to-end
+3. **Zero-Placeholder Policy** — Real data, real AI responses, no mocks in production
+4. **Evidence-Driven Development** — Every decision backed by user research
 
 ## Tech Stack
 
 ### Frontend
-- **Next.js 14** with App Router and TypeScript
-- **TailwindCSS** for styling with custom design system
-- **Zustand** for client-side state management
-- **shadcn/ui** component patterns
+| Technology | Purpose |
+|------------|---------|
+| **Next.js 14** | App Router, RSC, API routes |
+| **TypeScript** | Type safety across the stack |
+| **Tailwind CSS** | Utility-first styling |
+| **Zustand** | Client-side state management |
+| **ReactFlow** | Mind map visualization |
+| **Lucide** | Icon system |
 
-### Data Layer
-- **Supabase** (Postgres + Auth) - Primary database and authentication
-- **In-memory storage** (Zustand) - Temporary until full Supabase integration
+### Backend
+| Technology | Purpose |
+|------------|---------|
+| **Supabase** | PostgreSQL + Auth + RLS |
+| **Groq SDK** | AI inference (Llama 3.3, GPT-OSS) |
+| **Firecrawl** | Web research and competitor analysis |
+| **Zod** | Runtime validation |
 
-### AI/External Services
-- **Firecrawl** - Web scraping and competitor data gathering
-- **Groq** - AI synthesis and analysis
-
-### Deployment
-- **Vercel** - Next.js app hosting and serverless functions
-- **Supabase** - Database and authentication hosting
+### Infrastructure
+| Technology | Purpose |
+|------------|---------|
+| **Vercel** | Hosting + Serverless functions |
+| **Supabase Cloud** | Database hosting |
+| **GitHub Actions** | CI/CD (planned) |
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── api/               # API routes (server actions)
-│   │   ├── auth/          # Authentication endpoints (Supabase Auth)
-│   │   ├── firecrawl/     # Firecrawl integration (mock responses)
-│   │   ├── groq/         # Groq AI integration (mock responses)
-│   │   └── supabase/     # Supabase database operations (optimistic updates)
-│   ├── account/          # Account management with authentication UI
-│   ├── dashboard/        # Project dashboard (real Supabase data)
-│   ├── exports/          # Export functionality
-│   ├── insight/          # Insight analysis (draft + Supabase versions)
-│   ├── intake/           # Project creation (persists to Supabase)
-│   ├── mindmap/          # Visual mind mapping
-│   ├── vault/            # Decision vault (locked decisions display)
-│   ├── globals.css       # Global styles and Tailwind
-│   ├── layout.tsx        # Root layout with sidebar
-│   └── page.tsx          # Home page
-├── components/            # Reusable UI components
-│   ├── ui/              # Shared UI primitives
-│   │   ├── button.tsx   # Button component with variants
-│   │   ├── card.tsx     # Card layout components
-│   │   ├── badge.tsx    # Status badge component
-│   │   ├── input.tsx    # Form input component
-│   │   └── textarea.tsx # Multi-line text input
-│   └── sidebar.tsx       # Navigation sidebar
-├── lib/                   # Utilities and shared logic
-│   ├── constants.ts      # App constants and navigation
-│   ├── env.example.ts    # Environment variables template
-│   ├── export.ts         # Export utilities
-│   ├── store.ts          # Zustand store setup
-│   ├── time.ts           # Time formatting utilities
-│   └── utils.ts          # General utility functions
-└── types/                # TypeScript type definitions
-    └── project.ts        # Project and insight data structures
+├── app/                        # Next.js App Router
+│   ├── api/                    # API Routes
+│   │   ├── engine/             # Shepherd Engine APIs
+│   │   │   ├── clarity/        # Compass API
+│   │   │   ├── research/       # Muse API
+│   │   │   └── blueprint/      # Blueprint API
+│   │   ├── auth/               # Supabase Auth
+│   │   └── mindmap/            # Mind map generation
+│   ├── compass/                # 🧭 Step 1: Idea Clarity
+│   ├── muse/                   # 🎭 Step 2: User Research
+│   ├── blueprint/              # 📐 Step 3: MVP Planning
+│   ├── mindmap/                # 🗺️ Visual Strategy
+│   ├── vault/                  # 🔒 Decision Vault
+│   ├── dashboard/              # Project Dashboard
+│   ├── exports/                # Export Functionality
+│   └── account/                # User Account
+├── components/                 # React Components
+│   ├── ui/                     # Design System
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   └── ...
+│   ├── logo.tsx                # ShepLight Logo
+│   ├── sidebar.tsx             # Navigation
+│   └── journey-progress.tsx    # Journey Tracker
+├── lib/                        # Core Libraries
+│   ├── engine/                 # 🐑 Shepherd Engine
+│   │   ├── groq-client.ts      # AI Client
+│   │   ├── insight-reasoner.ts # Compass Logic
+│   │   ├── persona-synth.ts    # Muse Logic
+│   │   ├── blueprint-composer.ts # Blueprint Logic
+│   │   └── types.ts            # Engine Types
+│   ├── research/               # Research Tools
+│   │   └── firecrawl-client.ts # Web Research
+│   ├── store.ts                # Zustand State
+│   ├── supabase.ts             # DB Client
+│   └── utils.ts                # Utilities
+└── types/                      # TypeScript Types
 ```
 
-## Data Flow (Hybrid Architecture)
+## Core Architecture: The Shepherd Engine
 
-### Current Implementation (Supabase + Zustand)
-- **Dashboard**: Loads real projects from Supabase with optimistic caching via Zustand
-- **Intake**: Creates projects in Supabase immediately, shows optimistic updates in UI
-- **Insight**: Displays both draft data (immediate) and persisted project versions (from Supabase)
-- **Vault**: Shows locked decisions from both Supabase versions and draft data
-- **State Management**: Hybrid approach with optimistic updates and error recovery
-- **Persistence**: Full persistence with real-time sync capabilities
+The **Shepherd Engine** is ShepLight's unified AI core that powers all three journey steps.
 
-### Optimistic Update Flow
-1. **User Action**: Create project, update version, etc.
-2. **Immediate UI Update**: Zustand updates instantly (optimistic)
-3. **Background Sync**: API call to Supabase in the background
-4. **Success**: Keep optimistic update, update cache
-5. **Failure**: Revert to previous state, show error message
+### Engine Flow
 
-### Authentication Flow
-1. **Account Page**: Supabase Auth handles registration/login
-2. **Session Management**: Zustand stores session state locally
-3. **Protected Routes**: Automatic redirect if not authenticated
-4. **Real-time Updates**: Session changes sync across tabs
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     SHEPHERD ENGINE                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│  │   Insight   │───▶│   Persona   │───▶│  Blueprint  │        │
+│  │  Reasoner   │    │   Synth     │    │  Composer   │        │
+│  └─────────────┘    └─────────────┘    └─────────────┘        │
+│        │                  │                  │                 │
+│        ▼                  ▼                  ▼                 │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│  │   Clarity   │    │  Research   │    │  Blueprint  │        │
+│  │   Output    │    │   Output    │    │   Output    │        │
+│  └─────────────┘    └─────────────┘    └─────────────┘        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   Groq Client   │
+                    │  (Multi-model)  │
+                    └─────────────────┘
+```
 
-### Insight Generation (Future)
-- **Current**: Insight page renders directly from Zustand `currentDraftVersionData`
-- **Future**: 
-  - `/app/api/analyze` will receive intake data
-  - Call Firecrawl for competitive research
-  - Call Groq for AI synthesis and enhancement
-  - Return enriched insight data with competitive analysis and recommendations
-  - Frontend will merge AI insights with user input
+### AI Model Strategy
+
+```typescript
+// Primary model with automatic fallback
+const models: GroqModel[] = [
+  'llama-3.3-70b-versatile',  // Primary: Best quality
+  'openai/gpt-oss-120b',      // Fallback 1: Alternative
+  'llama-3.1-8b-instant',     // Fallback 2: Fast
+]
+```
+
+### Data Persistence
+
+| Session Type | Table | Relationships |
+|--------------|-------|---------------|
+| Clarity | `clarity_sessions` | → user_id |
+| Research | `research_sessions` | → clarity_id |
+| Blueprint | `blueprint_sessions` | → clarity_id, research_id |
+
+All tables use **Row Level Security (RLS)** — users can only access their own data.
 
 ## API Integration Points
 

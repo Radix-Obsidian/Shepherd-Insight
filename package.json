@@ -1,8 +1,8 @@
 {
-  "name": "shepherd-insight",
+  "name": "sheplight",
   "version": "1.0.0",
-  "description": "From idea to clarity in minutes",
-  "private": true,
+  "description": "Light the way from idea to launch — AI-powered UX research for founders",
+  "private": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -73,12 +73,17 @@
     "url": "git+https://github.com/Radix-Obsidian/Shepherd-Insight.git"
   },
   "keywords": [
+    "ux-research",
+    "ai",
+    "product-development",
+    "mvp",
+    "personas",
+    "startup",
     "nextjs",
     "typescript",
-    "tailwindcss",
-    "insight",
-    "ai"
+    "groq",
+    "llm"
   ],
-  "author": "",
-  "license": "ISC"
+  "author": "Golden Sheep AI",
+  "license": "MIT"
 }

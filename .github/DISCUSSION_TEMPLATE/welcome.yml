@@ -1,0 +1,51 @@
+title: "Welcome to ShepLight Discussions"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 👋 Welcome to the ShepLight Community!
+        
+        We're building an open-core AI-powered UX research platform that helps founders transform ideas into validated product blueprints.
+        
+        **Our Mission:** Give every founder access to senior UX researcher thinking — in minutes, not months.
+        
+        ## 🐑 How to Use Discussions
+        
+        ### 💡 Ideas & Feature Requests
+        Have an idea for ShepLight? Share it in the **Ideas** category! We prioritize features based on community feedback.
+        
+        ### ❓ Q&A
+        Stuck on something? Ask in **Q&A** and the community will help. Before posting:
+        - Check existing discussions
+        - Review the [documentation](./docs/)
+        - Include relevant details (browser, OS, error messages)
+        
+        ### 🎉 Show and Tell
+        Built something cool with ShepLight? Share it! We love seeing how founders use the platform.
+        
+        ### 💬 General
+        Just want to chat? Introduce yourself, share your founder journey, or discuss UX research methodology.
+        
+        ## 🤝 Community Guidelines
+        
+        1. **Be kind** — We're all here to learn and build
+        2. **Be helpful** — Share what you know, ask good questions
+        3. **Be patient** — Maintainers and contributors are volunteers
+        4. **Stay on topic** — Keep discussions focused and productive
+        
+        ## 🔗 Quick Links
+        
+        - [📖 Documentation](./docs/)
+        - [🐛 Report a Bug](https://github.com/Radix-Obsidian/Shepherd-Insight/issues/new?template=bug_report.md)
+        - [🗺️ Roadmap](https://github.com/Radix-Obsidian/Shepherd-Insight#-roadmap)
+        - [🤝 Contributing](./CONTRIBUTING.md)
+        
+        ---
+        
+        **Introduce yourself below!** Tell us:
+        - What are you building?
+        - What brought you to ShepLight?
+        - What's your biggest product development challenge?
+        
+        *"Start with the customer experience. Work backwards to technology."* — Steve Jobs

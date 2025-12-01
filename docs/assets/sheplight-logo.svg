@@ -1,0 +1,40 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background glow -->
+  <circle cx="60" cy="60" r="55" fill="url(#glow)" opacity="0.2"/>
+  
+  <!-- Shepherd's Crook / Staff -->
+  <path
+    d="M35 105V45C35 27 49 15 67 15C85 15 99 27 99 45"
+    stroke="#0F172A"
+    stroke-width="8"
+    stroke-linecap="round"
+    fill="none"
+  />
+  
+  <!-- The Light (Cross/Spark) inside the crook -->
+  <path
+    d="M67 28V52M55 40H79"
+    stroke="#F59E0B"
+    stroke-width="8"
+    stroke-linecap="round"
+  />
+  
+  <!-- Light ring -->
+  <circle 
+    cx="67" 
+    cy="40" 
+    r="18" 
+    stroke="#F59E0B" 
+    stroke-width="3" 
+    fill="none"
+    opacity="0.4"
+  />
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
