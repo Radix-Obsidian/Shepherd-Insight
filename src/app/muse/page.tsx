@@ -211,35 +211,61 @@ function MusePageContent() {
             {/* Research Options */}
             <div className="p-6 bg-white border-2 border-slate-200 rounded-xl space-y-6">
               <div>
-                <label className="block text-lg font-medium text-slate-800 mb-3">
-                  Competitor URLs <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <textarea
-                  value={competitorUrls}
-                  onChange={(e) => setCompetitorUrls(e.target.value)}
-                  placeholder="https://competitor1.com&#10;https://competitor2.com&#10;https://competitor3.com"
-                  className="w-full h-32 px-4 py-3 text-base border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
-                />
-                <p className="mt-2 text-sm text-slate-500">
-                  Add competitor websites to include in the research (one per line, max 3)
-                </p>
+                <div className="flex items-start justify-between mb-3">
+                  <label className="block text-lg font-medium text-slate-800">
+                    Competitor URLs <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                    Max 3 URLs
+                  </span>
+                </div>
+                <div className="relative">
+                  <textarea
+                    value={competitorUrls}
+                    onChange={(e) => setCompetitorUrls(e.target.value)}
+                    placeholder="https://stridekick.com&#10;https://strava.com&#10;https://runkeeper.com"
+                    rows={4}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none font-mono text-sm"
+                  />
+                  {competitorUrls.trim() === '' && (
+                    <div className="absolute top-16 left-4 text-slate-400 text-xs pointer-events-none">
+                      <p>💡 Enter one URL per line (press Enter after each)</p>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex items-start gap-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+                  <BookOpen className="w-4 h-4 mt-0.5 text-indigo-500 flex-shrink-0" />
+                  <p>
+                    <strong>How it works:</strong> Each URL on a new line. We&apos;ll analyze these competitors to find gaps and opportunities for your product.
+                  </p>
+                </div>
               </div>
 
               {/* Quick Mode Toggle */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-slate-800">Quick Research Mode</p>
-                  <p className="text-sm text-slate-500">Skip web research, use AI knowledge only (faster)</p>
+              <div className="flex items-start sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-slate-800">Quick Research Mode</p>
+                    {quickMode && (
+                      <span className="text-xs font-medium text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Skip web scraping • Use AI knowledge only • Faster results (~30 seconds)
+                  </p>
                 </div>
                 <button
                   onClick={() => setQuickMode(!quickMode)}
-                  className={`relative w-14 h-8 rounded-full transition-colors ${
+                  className={`relative flex-shrink-0 w-16 h-9 rounded-full transition-all duration-300 shadow-inner ${
                     quickMode ? 'bg-indigo-500' : 'bg-slate-300'
                   }`}
+                  aria-label="Toggle quick research mode"
                 >
                   <span 
-                    className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform ${
-                      quickMode ? 'translate-x-7' : 'translate-x-1'
+                    className={`absolute top-1 w-7 h-7 bg-white rounded-full shadow-md transition-all duration-300 ${
+                      quickMode ? 'left-8' : 'left-1'
                     }`} 
                   />
                 </button>
