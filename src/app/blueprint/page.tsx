@@ -17,6 +17,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FileText, Loader2, Target, Rocket, CheckCircle2, Calendar, AlertTriangle, Download, Star } from 'lucide-react'
 import { JourneyProgress } from '@/components/journey-progress'
+import { useAppStore } from '@/lib/store'
 
 interface UserStory {
   asA: string
@@ -58,10 +59,15 @@ function BlueprintPageContent() {
   const searchParams = useSearchParams()
   const clarityId = searchParams.get('clarityId')
   const researchId = searchParams.get('researchId')
+  const createProjectFromJourney = useAppStore(s => s.createProjectFromJourney)
 
   const [viewState, setViewState] = useState<ViewState>('loading')
   const [blueprint, setBlueprint] = useState<BlueprintOutput | null>(null)
-  const [, setSessionId] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [projectId, setProjectId] = useState<string | null>(null)
+  const [versionId, setVersionId] = useState<string | null>(null)
+  const [clarity, setClarity] = useState<any>(null)
+  const [research, setResearch] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [expandedFeature, setExpandedFeature] = useState<number | null>(null)
 
@@ -101,6 +107,32 @@ function BlueprintPageContent() {
 
       setBlueprint(result.data.blueprint)
       setSessionId(result.data.sessionId)
+      
+      // Fetch clarity and research data for saving
+      const [clarityRes, researchRes] = await Promise.all([
+        fetch(`/api/engine/clarity?id=${clarityId}`),
+        fetch(`/api/engine/research?id=${researchId}`)
+      ])
+      
+      const clarityData = await clarityRes.json()
+      const researchData = await researchRes.json()
+      
+      if (clarityData.success && researchData.success) {
+        setClarity(clarityData.data.clarity)
+        setResearch(researchData.data.research)
+        
+        // Auto-save journey to store for exports and vault
+        const { projectId: pid, versionId: vid } = createProjectFromJourney({
+          projectName: clarityData.data.clarity.problemStatement?.split(' ').slice(0, 5).join(' ') || 'My Project',
+          clarity: clarityData.data.clarity,
+          research: researchData.data.research,
+          blueprint: result.data.blueprint,
+        })
+        
+        setProjectId(pid)
+        setVersionId(vid)
+      }
+      
       setViewState('result')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -459,20 +491,39 @@ function BlueprintPageContent() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button
-                onClick={handleExport}
-                className="flex-1 py-5 px-8 bg-emerald-500 hover:bg-emerald-600 text-white text-xl font-semibold rounded-xl transition-colors flex items-center justify-center gap-3"
-              >
-                <Download className="w-6 h-6" />
-                Export Blueprint
-              </button>
-              <button
-                onClick={handleStartOver}
-                className="py-5 px-8 bg-slate-100 hover:bg-slate-200 text-slate-700 text-lg font-medium rounded-xl transition-colors"
-              >
-                Start New Journey
-              </button>
+            <div className="space-y-4 pt-4">
+              <div className="p-6 bg-gradient-to-r from-amber-50 to-emerald-50 border-2 border-amber-200 rounded-xl">
+                <h3 className="text-lg font-bold text-slate-800 mb-2">✨ Your Journey is Saved!</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  All your decisions from Compass, Muse, and Blueprint are now available in your Vault and ready to export.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {projectId && versionId && (
+                    <>
+                      <button
+                        onClick={() => router.push(`/vault?projectId=${projectId}&versionId=${versionId}`)}
+                        className="flex-1 py-3 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Target className="w-5 h-5" />
+                        View in Vault
+                      </button>
+                      <button
+                        onClick={() => router.push(`/exports?projectId=${projectId}&versionId=${versionId}`)}
+                        className="flex-1 py-3 px-6 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-5 h-5" />
+                        Export All
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={handleStartOver}
+                    className="py-3 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
+                  >
+                    Start New Journey
+                  </button>
+                </div>
+              </div>
             </div>
 
           </div>

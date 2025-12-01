@@ -5,10 +5,18 @@ import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import type { ProjectRecord, VersionRecord, VersionData } from '@/types/project';
 
+interface JourneyData {
+  projectName: string;
+  clarity: any; // ClarityOutput from Compass
+  research?: any; // ResearchOutput from Muse (optional)
+  blueprint?: any; // BlueprintOutput from Blueprint (optional)
+}
+
 interface StoreState {
   projects: ProjectRecord[];
 
   createProjectFromIntake: (form: Omit<VersionData, 'positioning' | 'timestampISO'>) => { projectId: string; versionId: string };
+  createProjectFromJourney: (journey: JourneyData) => { projectId: string; versionId: string };
   getProject: (projectId: string) => ProjectRecord | undefined;
   getProjectVersion: (projectId: string, versionId: string) => VersionRecord | undefined;
   getLatestVersion: (projectId: string) => VersionRecord | undefined;
@@ -72,6 +80,50 @@ export const useAppStore = create<StoreState>()(
           createdAtISO: timestamp,
           versions: [version],
         };
+        set(state => ({ projects: [project, ...state.projects] }));
+        return { projectId, versionId };
+      },
+
+      createProjectFromJourney: (journey) => {
+        const projectId = nanoid();
+        const versionId = nanoid();
+        const timestamp = nowISO();
+        
+        // Extract data from Clarity output
+        const { clarity } = journey;
+        const name = journey.projectName || 'ShepLight Journey';
+        
+        const version: VersionRecord = {
+          id: versionId,
+          label: 'v1',
+          timestampISO: timestamp,
+          data: {
+            name,
+            audience: clarity.targetUser || 'Users',
+            problem: clarity.problemStatement || '',
+            promise: clarity.valueHypotheses?.[0] || '',
+            whyCurrentFails: clarity.opportunityGap || '',
+            mustHaves: clarity.valueHypotheses || [],
+            notNow: [],
+            positioning: `We help ${clarity.targetUser || 'users'} solve ${clarity.problemStatement || 'their challenges'}.`,
+            timestampISO: timestamp,
+            // Store raw journey data for export
+            journeyData: {
+              clarity,
+              research: journey.research,
+              blueprint: journey.blueprint,
+            },
+          } as any,
+          locked: { mustHavesLocked: [], notNowLocked: [] },
+        };
+        
+        const project: ProjectRecord = {
+          id: projectId,
+          name,
+          createdAtISO: timestamp,
+          versions: [version],
+        };
+        
         set(state => ({ projects: [project, ...state.projects] }));
         return { projectId, versionId };
       },
