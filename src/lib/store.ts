@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { ProjectRecord, VersionRecord, VersionData } from '@/types/project';
+import type { ProjectRecord, VersionRecord, VersionData, Decision, DecisionType, DecisionState } from '@/types/project';
 
 interface JourneyData {
   projectName: string;
@@ -24,6 +24,16 @@ interface StoreState {
   lockDecisions: (projectId: string, versionId: string, lock: { mustHavesLocked: string[]; notNowLocked: string[] }) => void;
   cloneVersion: (projectId: string, versionId: string) => { newVersionId: string };
   listProjects: () => ProjectRecord[];
+  
+  // Decision Vault Management
+  createDecisionsFromJourney: (projectId: string, versionId: string, journeyData: any) => void;
+  lockDecision: (projectId: string, versionId: string, decisionId: string) => void;
+  unlockDecision: (projectId: string, versionId: string, decisionId: string) => void;
+  refineDecision: (projectId: string, versionId: string, decisionId: string, refinedContent: any, userRequest: string, aiProvider: string) => void;
+  replaceDecision: (projectId: string, versionId: string, decisionId: string, newContent: any, aiProvider: string) => void;
+  discardDecision: (projectId: string, versionId: string, decisionId: string) => void;
+  getDecisions: (projectId: string, versionId: string, filters?: { type?: DecisionType; state?: DecisionState }) => Decision[];
+  getDecisionStats: (projectId: string, versionId: string) => { total: number; locked: number; pending: number; refined: number; replaced: number; discarded: number };
 }
 
 function nowISO() {
@@ -216,6 +226,306 @@ export const useAppStore = create<StoreState>()(
       },
 
       listProjects: () => get().projects,
+
+      // Decision Vault Management
+      createDecisionsFromJourney: (projectId, versionId, journeyData) => {
+        const decisions: Decision[] = [];
+        const timestamp = nowISO();
+        
+        // Create decisions from personas
+        if (journeyData.research?.personas) {
+          journeyData.research.personas.forEach((persona: any) => {
+            decisions.push({
+              id: nanoid(),
+              type: 'persona',
+              content: persona,
+              state: 'pending',
+              locked: false,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+          });
+        }
+        
+        // Create decisions from pain points
+        if (journeyData.research?.painMap) {
+          journeyData.research.painMap.forEach((pain: any) => {
+            decisions.push({
+              id: nanoid(),
+              type: 'painPoint',
+              content: pain,
+              state: 'pending',
+              locked: false,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+          });
+        }
+        
+        // Create decisions from insights
+        if (journeyData.research?.insights) {
+          journeyData.research.insights.forEach((insight: string) => {
+            decisions.push({
+              id: nanoid(),
+              type: 'insight',
+              content: { text: insight },
+              state: 'pending',
+              locked: false,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+          });
+        }
+        
+        // Create decisions from features (blueprint)
+        if (journeyData.blueprint?.features) {
+          journeyData.blueprint.features.forEach((feature: any) => {
+            decisions.push({
+              id: nanoid(),
+              type: 'feature',
+              content: feature,
+              state: 'pending',
+              locked: false,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+          });
+        }
+        
+        // Create decisions from competitor gaps
+        if (journeyData.research?.competitorGaps) {
+          journeyData.research.competitorGaps.forEach((gap: any) => {
+            decisions.push({
+              id: nanoid(),
+              type: 'competitorGap',
+              content: gap,
+              state: 'pending',
+              locked: false,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+          });
+        }
+        
+        // Update version with decisions
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions,
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      lockDecision: (projectId, versionId, decisionId) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      return {
+                        ...decision,
+                        locked: true,
+                        lockedAt: nowISO(),
+                        state: 'locked' as DecisionState,
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      unlockDecision: (projectId, versionId, decisionId) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      return {
+                        ...decision,
+                        locked: false,
+                        lockedAt: undefined,
+                        state: decision.state === 'locked' ? 'pending' : decision.state,
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      refineDecision: (projectId, versionId, decisionId, refinedContent, userRequest, aiProvider) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      
+                      const historyEntry = {
+                        timestamp: nowISO(),
+                        userRequest,
+                        originalContent: decision.content,
+                        refinedContent,
+                        aiProvider,
+                      };
+                      
+                      return {
+                        ...decision,
+                        content: refinedContent,
+                        state: 'refined' as DecisionState,
+                        originalContent: decision.originalContent || decision.content,
+                        refinementHistory: [...(decision.refinementHistory || []), historyEntry],
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      replaceDecision: (projectId, versionId, decisionId, newContent, aiProvider) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      
+                      const historyEntry = {
+                        timestamp: nowISO(),
+                        userRequest: 'Replaced with alternative',
+                        originalContent: decision.content,
+                        refinedContent: newContent,
+                        aiProvider,
+                      };
+                      
+                      return {
+                        ...decision,
+                        content: newContent,
+                        state: 'replaced' as DecisionState,
+                        originalContent: decision.originalContent || decision.content,
+                        refinementHistory: [...(decision.refinementHistory || []), historyEntry],
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      discardDecision: (projectId, versionId, decisionId) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      return {
+                        ...decision,
+                        state: 'discarded' as DecisionState,
+                        locked: false,
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      getDecisions: (projectId, versionId, filters) => {
+        const version = get().getProjectVersion(projectId, versionId);
+        if (!version?.data.decisions) return [];
+        
+        let decisions = version.data.decisions;
+        
+        if (filters?.type) {
+          decisions = decisions.filter(d => d.type === filters.type);
+        }
+        
+        if (filters?.state) {
+          decisions = decisions.filter(d => d.state === filters.state);
+        }
+        
+        return decisions;
+      },
+
+      getDecisionStats: (projectId, versionId) => {
+        const decisions = get().getDecisions(projectId, versionId);
+        
+        return {
+          total: decisions.length,
+          locked: decisions.filter(d => d.state === 'locked').length,
+          pending: decisions.filter(d => d.state === 'pending').length,
+          refined: decisions.filter(d => d.state === 'refined').length,
+          replaced: decisions.filter(d => d.state === 'replaced').length,
+          discarded: decisions.filter(d => d.state === 'discarded').length,
+        };
+      },
     }),
     {
       name: 'shepherd-insight-store',

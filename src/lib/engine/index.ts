@@ -15,6 +15,16 @@
 // Types
 export * from './types'
 
+// AI Orchestration Layer
+export {
+  orchestrate,
+  healthCheckAll,
+  estimateCost,
+  type AITask,
+  type AIProvider,
+  type OrchestrationConfig,
+} from './orchestrator'
+
 // Groq Client (official SDK integration)
 export {
   chatCompletion,
@@ -23,6 +33,16 @@ export {
   healthCheck,
   listModels,
 } from './groq-client'
+
+// Perplexity Client (real-time web research)
+export {
+  researchWithPerplexity,
+  researchCompetitors,
+  researchMarket,
+  researchProblemValidation,
+  healthCheckPerplexity,
+  type PerplexityResearchOptions,
+} from './perplexity-client'
 
 // Insight Reasoner (powers Compass)
 export {

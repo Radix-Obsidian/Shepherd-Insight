@@ -60,6 +60,7 @@ function BlueprintPageContent() {
   const clarityId = searchParams.get('clarityId')
   const researchId = searchParams.get('researchId')
   const createProjectFromJourney = useAppStore(s => s.createProjectFromJourney)
+  const createDecisionsFromJourney = useAppStore(s => s.createDecisionsFromJourney)
 
   const [viewState, setViewState] = useState<ViewState>('loading')
   const [blueprint, setBlueprint] = useState<BlueprintOutput | null>(null)
@@ -124,6 +125,13 @@ function BlueprintPageContent() {
         // Auto-save journey to store for exports and vault
         const { projectId: pid, versionId: vid } = createProjectFromJourney({
           projectName: clarityData.data.clarity.problemStatement?.split(' ').slice(0, 5).join(' ') || 'My Project',
+          clarity: clarityData.data.clarity,
+          research: researchData.data.research,
+          blueprint: result.data.blueprint,
+        })
+        
+        // Create decisions from journey data for Decision Vault
+        createDecisionsFromJourney(pid, vid, {
           clarity: clarityData.data.clarity,
           research: researchData.data.research,
           blueprint: result.data.blueprint,
@@ -220,14 +228,14 @@ function BlueprintPageContent() {
         
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-6">
-            <FileText className="w-8 h-8 text-emerald-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-6">
+            <FileText className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Shepherd Blueprint
+          <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">
+            A 4-week MVP plan you can stand behind.
           </h1>
-          <p className="text-xl text-slate-600">
-            Build With Purpose
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Blueprint turns your research into a focused feature list and launch path.
           </p>
         </div>
 

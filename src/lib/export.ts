@@ -2,7 +2,243 @@
 
 import { jsPDF } from 'jspdf';
 import * as htmlToImage from 'html-to-image';
-import type { VersionRecord } from '@/types/project';
+import type { VersionRecord, Decision } from '@/types/project';
+
+// ============================================================================
+// AI DEV PROMPT GENERATOR (Phase 3)
+// ============================================================================
+
+/**
+ * Formats a persona decision into readable prompt text
+ */
+function formatPersonaForPrompt(content: any): string {
+  const name = content.name || 'Unnamed Persona';
+  const role = content.role || content.title || '';
+  const quote = content.quote || content.tagline || '';
+  const goals = content.goals || [];
+  const frustrations = content.frustrations || content.painPoints || [];
+  
+  let text = `### ${name}`;
+  if (role) text += ` (${role})`;
+  text += '\n';
+  if (quote) text += `> "${quote}"\n\n`;
+  if (goals.length) {
+    text += `**Goals:**\n${goals.map((g: string) => `- ${g}`).join('\n')}\n\n`;
+  }
+  if (frustrations.length) {
+    text += `**Frustrations:**\n${frustrations.map((f: string) => `- ${f}`).join('\n')}\n`;
+  }
+  return text;
+}
+
+/**
+ * Formats a feature decision into readable prompt text
+ */
+function formatFeatureForPrompt(content: any): string {
+  const name = content.name || content.title || 'Unnamed Feature';
+  const description = content.description || content.userStory || '';
+  const priority = content.priority || '';
+  const acceptance = content.acceptanceCriteria || [];
+  
+  let text = `### ${name}`;
+  if (priority) text += ` [${priority}]`;
+  text += '\n';
+  if (description) text += `${description}\n\n`;
+  if (acceptance.length) {
+    text += `**Acceptance Criteria:**\n${acceptance.map((a: string) => `- ${a}`).join('\n')}\n`;
+  }
+  return text;
+}
+
+/**
+ * Formats a pain point decision into readable prompt text
+ */
+function formatPainPointForPrompt(content: any): string {
+  const pain = content.pain || content.description || content.text || 'Unnamed Pain Point';
+  const intensity = content.intensity || content.severity || '';
+  const context = content.context || content.impact || '';
+  
+  let text = `- **${pain}**`;
+  if (intensity) text += ` (Intensity: ${intensity})`;
+  text += '\n';
+  if (context) text += `  ${context}\n`;
+  return text;
+}
+
+/**
+ * Formats an insight decision into readable prompt text
+ */
+function formatInsightForPrompt(content: any): string {
+  const insight = content.insight || content.title || content.text || 'Unnamed Insight';
+  const evidence = content.evidence || content.source || '';
+  const implication = content.implication || content.actionable || '';
+  
+  let text = `- **${insight}**\n`;
+  if (evidence) text += `  Evidence: ${evidence}\n`;
+  if (implication) text += `  Implication: ${implication}\n`;
+  return text;
+}
+
+/**
+ * Formats a competitor gap decision into readable prompt text
+ */
+function formatCompetitorGapForPrompt(content: any): string {
+  const competitor = content.competitor || content.name || 'Competitor';
+  const weakness = content.weakness || content.gap || '';
+  const opportunity = content.opportunity || '';
+  
+  let text = `- **${competitor}:**`;
+  if (weakness) text += ` ${weakness}`;
+  text += '\n';
+  if (opportunity) text += `  Opportunity: ${opportunity}\n`;
+  return text;
+}
+
+/**
+ * Generates a comprehensive AI development prompt from locked decisions
+ * This is the "killer feature" - ready to paste into Claude/Cursor/Windsurf
+ */
+export function buildAIDevPrompt(v: VersionRecord, decisions: Decision[]): string {
+  const d = v.data;
+  const lockedDecisions = decisions.filter(dec => dec.locked || dec.state === 'locked' || dec.state === 'refined' || dec.state === 'replaced');
+  
+  // Group decisions by type
+  const personas = lockedDecisions.filter(dec => dec.type === 'persona');
+  const features = lockedDecisions.filter(dec => dec.type === 'feature');
+  const painPoints = lockedDecisions.filter(dec => dec.type === 'painPoint');
+  const insights = lockedDecisions.filter(dec => dec.type === 'insight');
+  const competitorGaps = lockedDecisions.filter(dec => dec.type === 'competitorGap');
+  
+  // Extract journey data if available
+  const clarity = d.journeyData?.clarity || {};
+  const research = d.journeyData?.research || {};
+  const blueprint = d.journeyData?.blueprint || {};
+  
+  const prompt = `# ${d.name || 'Project'} - AI Development Blueprint
+
+## Overview
+
+**Problem Statement:**
+${d.problem || clarity.problemStatement || '_Not defined_'}
+
+**Target User:**
+${d.audience || clarity.targetUser || '_Not defined_'}
+
+**Why Current Solutions Fail:**
+${d.whyCurrentFails || '_Not defined_'}
+
+**Our Promise:**
+${d.promise || clarity.valueProposition || '_Not defined_'}
+
+---
+
+## User Personas
+${personas.length > 0 
+  ? personas.map(p => formatPersonaForPrompt(p.content)).join('\n')
+  : '_No personas locked. Consider the target user above._'}
+
+---
+
+## Core Features (MVP Scope)
+${features.length > 0
+  ? features.map(f => formatFeatureForPrompt(f.content)).join('\n')
+  : d.mustHaves?.length 
+    ? d.mustHaves.map(f => `- ${f}`).join('\n')
+    : '_No features locked._'}
+
+---
+
+## User Pain Points to Address
+${painPoints.length > 0
+  ? painPoints.map(p => formatPainPointForPrompt(p.content)).join('\n')
+  : '_No pain points locked._'}
+
+---
+
+## Key Insights from Research
+${insights.length > 0
+  ? insights.map(i => formatInsightForPrompt(i.content)).join('\n')
+  : '_No insights locked._'}
+
+---
+
+## Competitor Gaps & Opportunities
+${competitorGaps.length > 0
+  ? competitorGaps.map(c => formatCompetitorGapForPrompt(c.content)).join('\n')
+  : '_No competitor gaps locked._'}
+
+---
+
+## Out of Scope (Not Now)
+${d.notNow?.length 
+  ? d.notNow.map(f => `- ${f}`).join('\n')
+  : '_Nothing explicitly parked._'}
+
+---
+
+## Constraints
+${d.constraints || '_No constraints specified._'}
+
+---
+
+## Development Instructions
+
+You are an expert software engineer building a product for the users and problems described above.
+
+**Tech Stack Recommendations:**
+- Frontend: Next.js 14 (App Router), TypeScript, TailwindCSS
+- UI Components: Radix UI or shadcn/ui
+- State Management: Zustand or React Context
+- Database: Supabase (PostgreSQL) or your preferred backend
+- Authentication: Supabase Auth or NextAuth
+
+**Build Guidelines:**
+1. Start with the user personas above - every feature should serve their needs
+2. Address the pain points directly - these are your success metrics
+3. Implement MVP features one at a time (vertical slice delivery)
+4. Keep the "Not Now" list visible - resist scope creep
+5. Write clean, production-ready TypeScript code
+6. Follow accessibility best practices (WCAG 2.1 AA)
+7. Design mobile-first, then enhance for desktop
+
+**Getting Started:**
+1. Set up the project structure with the tech stack above
+2. Implement authentication and user management first
+3. Build the core feature that addresses the #1 pain point
+4. Iterate based on the personas' goals and frustrations
+5. Test with real users matching the target persona
+
+---
+
+*Generated by ShepLight - From idea to clarity in minutes*
+*Decisions locked: ${lockedDecisions.length} | Generated: ${new Date().toLocaleString()}*
+`;
+
+  return prompt;
+}
+
+/**
+ * Copies the AI Dev Prompt to clipboard
+ */
+export async function copyAIDevPromptToClipboard(v: VersionRecord, decisions: Decision[]): Promise<boolean> {
+  try {
+    const prompt = buildAIDevPrompt(v, decisions);
+    await navigator.clipboard.writeText(prompt);
+    return true;
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    return false;
+  }
+}
+
+/**
+ * Downloads the AI Dev Prompt as a markdown file
+ */
+export function downloadAIDevPrompt(v: VersionRecord, decisions: Decision[]): void {
+  const prompt = buildAIDevPrompt(v, decisions);
+  const base = (v.data.name || 'project').toLowerCase().replace(/\s+/g, '-');
+  downloadTextFile(`${base}-ai-dev-prompt-${v.label}.md`, prompt, 'text/markdown;charset=utf-8');
+}
 
 export function buildMarkdown(v: VersionRecord) {
   const d = v.data;

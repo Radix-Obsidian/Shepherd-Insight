@@ -12,7 +12,7 @@
  */
 
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,11 @@ import VersionSwitcher from '@/components/VersionSwitcher';
 import { useAppStore } from '@/lib/store';
 import { Lock, ArrowRight, Compass, BookOpen, FileText } from 'lucide-react';
 import { JourneyProgress } from '@/components/journey-progress';
+import { DecisionCard } from '@/components/vault/DecisionCard';
+import { RefinementModal } from '@/components/vault/RefinementModal';
+import { AlternativesModal } from '@/components/vault/AlternativesModal';
+import { ProgressBanner } from '@/components/vault/ProgressBanner';
+import type { Decision } from '@/types/project';
 
 const tabs = [
   { label: 'Insight', href: '/insight' },
@@ -37,6 +42,59 @@ function VaultPageContent() {
   const version = useAppStore(s =>
     projectId && versionId ? s.getProjectVersion(projectId, versionId) : undefined
   );
+  
+  // Get decisions from Phase 2 (must be called unconditionally)
+  const getDecisions = useAppStore(s => s.getDecisions);
+  const getDecisionStats = useAppStore(s => s.getDecisionStats);
+  const lockDecision = useAppStore(s => s.lockDecision);
+  const refineDecision = useAppStore(s => s.refineDecision);
+  const replaceDecision = useAppStore(s => s.replaceDecision);
+  const discardDecision = useAppStore(s => s.discardDecision);
+
+  // Modal state
+  const [refinementModalOpen, setRefinementModalOpen] = useState(false);
+  const [alternativesModalOpen, setAlternativesModalOpen] = useState(false);
+  const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
+
+  // Decision handlers
+  const handleLockDecision = (decisionId: string) => {
+    lockDecision(projectId, versionId, decisionId);
+  };
+
+  const handleRefineDecision = async (userRequest: string) => {
+    if (!selectedDecision) return;
+
+    const response = await fetch('/api/vault/refine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        decisionType: selectedDecision.type,
+        originalContent: selectedDecision.content,
+        userRequest,
+      }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      refineDecision(
+        projectId,
+        versionId,
+        selectedDecision.id,
+        result.data.refinedContent,
+        userRequest,
+        result.data.aiProvider
+      );
+    }
+  };
+
+  const handleReplaceDecision = async (newContent: any) => {
+    if (!selectedDecision) return;
+    replaceDecision(projectId, versionId, selectedDecision.id, newContent, 'claude');
+  };
+
+  const handleDiscardDecision = (decisionId: string) => {
+    discardDecision(projectId, versionId, decisionId);
+  };
 
   // If no project/version and no blueprint, show journey start
   if (!projectId && !blueprintId) {
@@ -45,14 +103,14 @@ function VaultPageContent() {
         <div className="max-w-4xl mx-auto px-6 py-12">
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-100 mb-6">
-              <Lock className="w-8 h-8 text-purple-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-6">
+              <Lock className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-3">
-              Decision Vault
+            <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">
+              Lock decisions you feel good about.
             </h1>
-            <p className="text-xl text-slate-600">
-              Lock Decisions
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              The Decision Vault is your quiet, structured space to review everything ShepLight surfaced.
             </p>
           </div>
 
@@ -136,6 +194,10 @@ function VaultPageContent() {
 
   const data = version.data;
   const locked = version.locked;
+  
+  // Get decisions from Phase 2 (for debugging/preview)
+  const decisions = getDecisions(projectId, versionId);
+  const stats = getDecisionStats(projectId, versionId);
 
   return (
     <div className="space-y-6">
@@ -168,6 +230,58 @@ function VaultPageContent() {
             </Link>
           </div>
         </div>
+
+        {/* Phase 2.2: Decision Vault UI - Complete! */}
+        {decisions.length > 0 && (
+          <>
+            <ProgressBanner 
+              stats={stats} 
+              exportUrl={`/exports?projectId=${projectId}&versionId=${versionId}`}
+            />
+
+            <div className="space-y-4">
+              {decisions
+                .filter(d => d.state !== 'discarded')
+                .map(decision => (
+                  <DecisionCard
+                    key={decision.id}
+                    decision={decision}
+                    onLock={() => handleLockDecision(decision.id)}
+                    onRefine={() => {
+                      setSelectedDecision(decision);
+                      setRefinementModalOpen(true);
+                    }}
+                    onReplace={() => {
+                      setSelectedDecision(decision);
+                      setAlternativesModalOpen(true);
+                    }}
+                    onDiscard={() => handleDiscardDecision(decision.id)}
+                  />
+                ))
+              }
+            </div>
+
+            <RefinementModal
+              decision={selectedDecision}
+              isOpen={refinementModalOpen}
+              onClose={() => {
+                setRefinementModalOpen(false);
+                setSelectedDecision(null);
+              }}
+              onRefine={handleRefineDecision}
+            />
+
+            <AlternativesModal
+              decision={selectedDecision}
+              isOpen={alternativesModalOpen}
+              onClose={() => {
+                setAlternativesModalOpen(false);
+                setSelectedDecision(null);
+              }}
+              onReplace={handleReplaceDecision}
+            />
+          </>
+        )}
 
         <Card>
           <CardHeader>

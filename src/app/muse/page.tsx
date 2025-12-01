@@ -153,14 +153,14 @@ function MusePageContent() {
         
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-6">
-            <BookOpen className="w-8 h-8 text-indigo-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-6">
+            <BookOpen className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Shepherd Muse
+          <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">
+            Understand the humans behind your roadmap.
           </h1>
-          <p className="text-xl text-slate-600">
-            Understand Deeply
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Muse turns your clarity into rich personas, pain maps, and emotional journeys.
           </p>
         </div>
 
@@ -293,14 +293,72 @@ function MusePageContent() {
 
         {/* Researching State */}
         {viewState === 'researching' && (
-          <div className="text-center py-24">
-            <Loader2 className="w-16 h-16 text-indigo-500 animate-spin mx-auto mb-8" />
-            <h2 className="text-2xl font-semibold text-slate-800 mb-3">
-              {quickMode ? 'Synthesizing personas...' : 'Researching & synthesizing...'}
-            </h2>
-            <p className="text-lg text-slate-600">
-              The Shepherd Engine is building user understanding
-            </p>
+          <div className="py-12">
+            {!quickMode ? (
+              // Premium Perplexity Research UI
+              <div className="max-w-2xl mx-auto">
+                <div className="p-8 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-200 rounded-2xl shadow-lg">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="relative">
+                      <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
+                      <Zap className="w-5 h-5 text-purple-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-purple-900">
+                        Deep Research in Progress
+                      </h2>
+                      <p className="text-purple-700">
+                        Real-time web search with AI synthesis
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center gap-3 text-purple-800">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <p className="text-sm font-medium">Searching the web for market insights...</p>
+                    </div>
+                    <div className="flex items-center gap-3 text-purple-800">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-100"></div>
+                      <p className="text-sm font-medium">Analyzing competitor landscapes...</p>
+                    </div>
+                    <div className="flex items-center gap-3 text-purple-800">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-200"></div>
+                      <p className="text-sm font-medium">Synthesizing user personas...</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 pt-4 border-t border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-purple-600 font-medium">
+                        Powered by Perplexity Sonar + Claude Sonnet 4
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-purple-600">
+                        <Lightbulb className="w-4 h-4" />
+                        <span>Premium Research Mode</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-purple-500 italic">
+                      Deep research takes 30-90 seconds. We&apos;re searching the live web for you...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Quick Mode (Groq)
+              <div className="text-center py-24">
+                <Loader2 className="w-16 h-16 text-indigo-500 animate-spin mx-auto mb-8" />
+                <h2 className="text-2xl font-semibold text-slate-800 mb-3">
+                  Quick Synthesis in Progress
+                </h2>
+                <p className="text-lg text-slate-600">
+                  Creating personas from AI knowledge
+                </p>
+                <p className="text-sm text-slate-500 mt-2">
+                  Powered by Groq Llama 3.3
+                </p>
+              </div>
+            )}
           </div>
         )}
 

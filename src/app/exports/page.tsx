@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import { buildMarkdown, downloadTextFile, buildAndDownloadPDF } from '@/lib/export';
+import { buildMarkdown, downloadTextFile, buildAndDownloadPDF, copyAIDevPromptToClipboard, downloadAIDevPrompt } from '@/lib/export';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Sparkles, Copy, Download, Check } from 'lucide-react';
 
 const tabs = [
   { label: 'Insight', href: '/insight' },
@@ -20,6 +21,12 @@ function ExportsPageContent() {
   const projectId = params.get('projectId') || '';
   const versionId = params.get('versionId') || '';
   const version = useAppStore(s => s.getProjectVersion(projectId, versionId));
+  const getDecisions = useAppStore(s => s.getDecisions);
+  const [copied, setCopied] = useState(false);
+
+  // Get decisions for AI Dev Prompt
+  const decisions = projectId && versionId ? getDecisions(projectId, versionId) : [];
+  const lockedDecisions = decisions.filter(d => d.locked || d.state === 'locked' || d.state === 'refined' || d.state === 'replaced');
 
   if (!projectId || !versionId || !version) {
     return (
@@ -48,6 +55,18 @@ function ExportsPageContent() {
 
   const handlePdf = async () => {
     await buildAndDownloadPDF(currentVersion, { includeMindmap: true, mindmapElementId: 'mindmap-canvas' });
+  };
+
+  const handleCopyAIPrompt = async () => {
+    const success = await copyAIDevPromptToClipboard(currentVersion, decisions);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDownloadAIPrompt = () => {
+    downloadAIDevPrompt(currentVersion, decisions);
   };
 
   return (
@@ -89,6 +108,77 @@ function ExportsPageContent() {
            </p>
            <Button onClick={handlePdf}>Download as PDF (.pdf)</Button>
          </div>
+       </CardContent>
+     </Card>
+
+     {/* AI Dev Prompt Export - Phase 3 */}
+     <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+       <CardHeader>
+         <CardTitle className="flex items-center gap-2">
+           <Sparkles className="w-5 h-5 text-purple-600" />
+           AI Development Prompt
+         </CardTitle>
+       </CardHeader>
+       <CardContent className="space-y-4">
+         <p className="text-sm text-gray-700">
+           Generate a comprehensive prompt from your locked decisions – ready to paste into Claude, Cursor, or Windsurf to start building your app.
+         </p>
+         
+         <div className="bg-white rounded-lg border p-4 space-y-3">
+           <div className="flex items-center justify-between">
+             <div>
+               <h4 className="font-medium text-sm">Decisions Ready</h4>
+               <p className="text-xs text-gray-500">
+                 {lockedDecisions.length} locked decision{lockedDecisions.length !== 1 ? 's' : ''} will be included
+               </p>
+             </div>
+             <div className="text-right">
+               <span className={`text-2xl font-bold ${lockedDecisions.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                 {lockedDecisions.length}
+               </span>
+             </div>
+           </div>
+           
+           {lockedDecisions.length === 0 && (
+             <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
+               <strong>Tip:</strong> Lock some decisions in the Vault first to generate a meaningful AI prompt.
+             </div>
+           )}
+         </div>
+
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+           <Button 
+             onClick={handleCopyAIPrompt} 
+             variant="outline"
+             className="gap-2"
+             disabled={lockedDecisions.length === 0}
+           >
+             {copied ? (
+               <>
+                 <Check className="w-4 h-4 text-green-600" />
+                 Copied!
+               </>
+             ) : (
+               <>
+                 <Copy className="w-4 h-4" />
+                 Copy to Clipboard
+               </>
+             )}
+           </Button>
+           
+           <Button 
+             onClick={handleDownloadAIPrompt}
+             className="gap-2 bg-purple-600 hover:bg-purple-700"
+             disabled={lockedDecisions.length === 0}
+           >
+             <Download className="w-4 h-4" />
+             Download as .md
+           </Button>
+         </div>
+
+         <p className="text-xs text-gray-500 pt-2 border-t">
+           The prompt includes: problem statement, personas, MVP features, pain points, insights, competitor gaps, and development instructions.
+         </p>
        </CardContent>
      </Card>
 

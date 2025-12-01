@@ -139,7 +139,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ResearchR
         full_output: research,
         status: 'completed',
         processing_time_ms: processingTime,
-        model_used: 'llama-3.3-70b-versatile',
+        model_used: body.quickMode ? 'groq-llama-3.3-70b' : 'perplexity-sonar-deep-research + claude-sonnet-4',
       })
       .eq('id', session.id)
 

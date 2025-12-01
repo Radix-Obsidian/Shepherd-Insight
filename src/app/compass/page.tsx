@@ -128,14 +128,14 @@ export default function CompassPage() {
         
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 mb-6">
-            <Compass className="w-8 h-8 text-amber-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-6">
+            <Compass className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Shepherd Compass
+          <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">
+            Start with the story you want to tell.
           </h1>
-          <p className="text-xl text-slate-600">
-            Find Clarity
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Compass helps you turn a half-formed idea into a clear problem statement, audience, and promise.
           </p>
         </div>
 

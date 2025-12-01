@@ -9,7 +9,8 @@
 
 import { jsonCompletion, completionWithFallback, type ChatMessage } from './groq-client'
 import type { ClarityOutput, ResearchOutput } from './types'
-import { FirecrawlClient } from '@/lib/research/firecrawl-client'
+import { orchestrate } from './orchestrator'
+import { researchCompetitors, researchMarket } from './perplexity-client'
 
 const PERSONA_SYSTEM_PROMPT = `You are the ShepLight Empathy Engine — a UX-research AI that synthesizes raw data into deep human understanding.
 
@@ -117,102 +118,103 @@ export interface ResearchInput {
 }
 
 /**
- * Research and synthesize user understanding
- * This is the core function that powers Shepherd Muse
+ * Strip markdown code blocks from AI response
+ * Handles ```json ... ``` and ``` ... ``` formats
  */
-export async function synthesizeResearch(input: ResearchInput): Promise<ResearchOutput> {
-  // Step 1: Gather research data using Firecrawl
-  const researchData = await gatherResearch(input)
+function stripMarkdownCodeBlocks(content: string): string {
+  let cleaned = content.trim()
   
-  // Step 2: Synthesize into personas and insights using Groq
-  const messages: ChatMessage[] = [
-    { role: 'system', content: PERSONA_SYSTEM_PROMPT },
-    { role: 'user', content: PERSONA_USER_PROMPT(input.clarity, researchData) },
-  ]
-
-  try {
-    const result = await jsonCompletion<ResearchOutput>(messages, {
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.5, // More creative for persona generation
-      maxTokens: 4096,
-    })
-
-    // Validate the response structure
-    validateResearchOutput(result)
-    
-    return result
-  } catch (error) {
-    console.warn('Primary model failed, attempting fallback:', error)
-    
-    const result = await completionWithFallback<ResearchOutput>(
-      messages,
-      { temperature: 0.5, maxTokens: 4096 },
-      true
-    )
-
-    if (typeof result === 'string') {
-      throw new Error('Fallback returned string instead of JSON')
-    }
-
-    validateResearchOutput(result)
-    return result
+  // Remove ```json or ``` at the start
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.slice(7)
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.slice(3)
   }
+  
+  // Remove ``` at the end
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.slice(0, -3)
+  }
+  
+  return cleaned.trim()
 }
 
 /**
- * Gather research data from web sources
+ * Research and synthesize user understanding
+ * This is the core function that powers Shepherd Muse
+ * Uses Perplexity for deep web research + Claude for synthesis
  */
-async function gatherResearch(input: ResearchInput): Promise<string> {
-  const firecrawl = new FirecrawlClient()
+export async function synthesizeResearch(input: ResearchInput): Promise<ResearchOutput> {
+  // Step 1: Deep research using Perplexity
+  const researchData = await gatherResearchWithPerplexity(input)
+  
+  // Step 2: Synthesize into personas and insights using Claude
+  const synthesisPrompt = PERSONA_USER_PROMPT(input.clarity, researchData)
+  
+  const result = await orchestrate('synthesis', synthesisPrompt, {
+    systemPrompt: PERSONA_SYSTEM_PROMPT,
+    temperature: 0.5,
+    maxTokens: 4096
+  })
+
+  // Parse JSON from response (strip markdown code blocks if present)
+  const cleanedContent = stripMarkdownCodeBlocks(result.content)
+  const parsed = JSON.parse(cleanedContent) as ResearchOutput
+  
+  // Validate the response structure
+  validateResearchOutput(parsed)
+  
+  return parsed
+}
+
+/**
+ * Gather research data using Perplexity (real-time web research)
+ */
+async function gatherResearchWithPerplexity(input: ResearchInput): Promise<string> {
   const researchParts: string[] = []
 
   try {
-    // Search for information about the target user
-    const userSearchQuery = `${input.clarity.targetUser} pain points frustrations needs`
-    const userSearch = await firecrawl.search(userSearchQuery, { limit: 3 })
+    // Market research using Perplexity
+    const marketResearch = await researchMarket(
+      input.clarity.problemStatement,
+      input.clarity.targetUser
+    )
     
-    if (userSearch.data && userSearch.data.length > 0) {
-      researchParts.push('## User Research')
-      userSearch.data.forEach((item, i) => {
-        researchParts.push(`${i + 1}. ${item.title || ''}: ${item.description || item.snippet || ''}`)
-      })
-    }
-  } catch (error) {
-    console.warn('User search failed:', error)
-    researchParts.push('## User Research\nNo external user research available.')
-  }
-
-  try {
-    // Search for competitors and existing solutions
-    const competitorQuery = `${input.clarity.problemStatement} solutions apps tools`
-    const competitorSearch = await firecrawl.search(competitorQuery, { limit: 3 })
-    
-    if (competitorSearch.data && competitorSearch.data.length > 0) {
-      researchParts.push('\n## Competitor Research')
-      competitorSearch.data.forEach((item, i) => {
-        researchParts.push(`${i + 1}. ${item.title || ''}: ${item.description || item.snippet || ''}`)
-      })
-    }
-  } catch (error) {
-    console.warn('Competitor search failed:', error)
-    researchParts.push('\n## Competitor Research\nNo external competitor research available.')
-  }
-
-  // Scrape provided competitor URLs if any
-  if (input.competitorUrls && input.competitorUrls.length > 0) {
-    researchParts.push('\n## Direct Competitor Analysis')
-    
-    for (const url of input.competitorUrls.slice(0, 3)) { // Limit to 3 URLs
-      try {
-        const scrapeResult = await firecrawl.scrapeUrl(url, { formats: ['markdown'], onlyMainContent: true })
-        if (scrapeResult.data?.markdown) {
-          // Take first 1000 chars to avoid token overload
-          const content = scrapeResult.data.markdown.slice(0, 1000)
-          researchParts.push(`\n### ${url}\n${content}...`)
-        }
-      } catch (error) {
-        console.warn(`Failed to scrape ${url}:`, error)
+    if (marketResearch.choices[0]?.message?.content) {
+      researchParts.push('## Market Research (Perplexity)')
+      researchParts.push(marketResearch.choices[0].message.content)
+      
+      if (marketResearch.citations && marketResearch.citations.length > 0) {
+        researchParts.push('\nSources:')
+        marketResearch.citations.forEach((citation, i) => {
+          researchParts.push(`${i + 1}. ${citation}`)
+        })
       }
+    }
+  } catch (error) {
+    console.warn('Market research failed:', error)
+    researchParts.push('## Market Research\nNo external market research available.')
+  }
+
+  // Competitor research if URLs provided
+  if (input.competitorUrls && input.competitorUrls.length > 0) {
+    try {
+      const competitorResearch = await researchCompetitors(input.competitorUrls)
+      
+      if (competitorResearch.choices[0]?.message?.content) {
+        researchParts.push('\n## Competitor Analysis (Perplexity)')
+        researchParts.push(competitorResearch.choices[0].message.content)
+        
+        if (competitorResearch.citations && competitorResearch.citations.length > 0) {
+          researchParts.push('\nSources:')
+          competitorResearch.citations.forEach((citation, i) => {
+            researchParts.push(`${i + 1}. ${citation}`)
+          })
+        }
+      }
+    } catch (error) {
+      console.warn('Competitor research failed:', error)
+      researchParts.push('\n## Competitor Analysis\nNo external competitor research available.')
     }
   }
 
@@ -226,7 +228,7 @@ async function gatherResearch(input: ResearchInput): Promise<string> {
     return 'No external research available. Synthesize personas based on the clarity output alone, using your knowledge of similar markets and user types.'
   }
 
-  return researchParts.join('\n')
+  return researchParts.join('\n\n')
 }
 
 /**
@@ -255,27 +257,25 @@ function validateResearchOutput(output: ResearchOutput): void {
 }
 
 /**
- * Quick research without Firecrawl (uses AI knowledge only)
- * Useful for fast iteration or when research credits are limited
+ * Quick research using Groq (AI knowledge only, no web search)
+ * Useful for fast iteration or when credits are limited
  */
 export async function synthesizeQuickResearch(clarity: ClarityOutput): Promise<ResearchOutput> {
-  const messages: ChatMessage[] = [
-    { role: 'system', content: PERSONA_SYSTEM_PROMPT },
-    { 
-      role: 'user', 
-      content: PERSONA_USER_PROMPT(
-        clarity, 
-        'No external research available. Use your knowledge of similar markets, user types, and common patterns to synthesize realistic personas and insights.'
-      ) 
-    },
-  ]
-
-  const result = await jsonCompletion<ResearchOutput>(messages, {
-    model: 'llama-3.3-70b-versatile',
+  const prompt = PERSONA_USER_PROMPT(
+    clarity, 
+    'No external research available. Use your knowledge of similar markets, user types, and common patterns to synthesize realistic personas and insights.'
+  )
+  
+  const result = await orchestrate('quick-research', prompt, {
+    systemPrompt: PERSONA_SYSTEM_PROMPT,
     temperature: 0.5,
-    maxTokens: 4096,
+    maxTokens: 4096
   })
 
-  validateResearchOutput(result)
-  return result
+  // Parse JSON from response (strip markdown code blocks if present)
+  const cleanedContent = stripMarkdownCodeBlocks(result.content)
+  const parsed = JSON.parse(cleanedContent) as ResearchOutput
+  
+  validateResearchOutput(parsed)
+  return parsed
 }

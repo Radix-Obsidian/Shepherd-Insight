@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Golden Sheep AI' }],
   creator: 'Golden Sheep AI',
+  icons: {
+    icon: '/sheplight-logo.png',
+    shortcut: '/sheplight-logo.png',
+    apple: '/sheplight-logo.png',
+  },
   openGraph: {
     title: `${APP_NAME} - Light the Way to Your MVP`,
     description: 'Transform your idea into clarity, personas, and an actionable MVP plan in minutes.',
