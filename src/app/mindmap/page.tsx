@@ -98,7 +98,27 @@ function MindMapPageContent() {
       }
       
       if (version?.data?.journeyData) {
+        // New Shepherd Journey flow - use journeyData directly
         setJourneyData(version.data.journeyData)
+      } else if (version?.data) {
+        // Legacy intake flow - construct journeyData from version.data
+        const legacyData = version.data
+        const constructedJourneyData: JourneyDataType = {
+          clarity: {
+            problemStatement: legacyData.problem,
+            targetUser: legacyData.audience,
+            opportunityGap: legacyData.whyCurrentFails,
+            valueHypotheses: legacyData.mustHaves || [],
+          },
+          blueprint: {
+            features: (legacyData.mustHaves || []).map((name: string) => ({
+              name,
+              description: 'Core MVP feature',
+              priority: 'high'
+            })),
+          }
+        }
+        setJourneyData(constructedJourneyData)
       }
       
       // Load existing mindmap from localStorage

@@ -342,7 +342,7 @@ function VaultPageContent() {
           <Link href={`/exports?projectId=${projectId}&versionId=${versionId}`}>
             <Button>Export Brief</Button>
           </Link>
-          <Link href={`/mindmap?projectId=${projectId}`}>
+          <Link href={`/mindmap?projectId=${projectId}&versionId=${versionId}`}>
             <Button variant="ghost">Open Mind Map</Button>
           </Link>
         </div>
