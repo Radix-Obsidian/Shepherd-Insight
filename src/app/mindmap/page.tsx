@@ -3,11 +3,13 @@
 /**
  * Mind Map Builder
  * 
- * Visualize your ideas with AI-powered mind map generation.
- * Works standalone or with Shepherd Journey data.
+ * Steve Jobs: "Start with the customer experience and work backwards to the technology."
+ * 
+ * This page SHOWS users what they built in their Shepherd Journey.
+ * No re-interpretation needed - their data becomes a visual map.
  */
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ReactFlowProvider } from 'reactflow'
@@ -18,7 +20,44 @@ import { Toolbar } from '@/components/mindmap/Toolbar'
 import { AIControls } from '@/components/mindmap/AIControls'
 import { useMindMapStore } from '@/lib/mindmap/store'
 import { useAppStore } from '@/lib/store'
-import { Compass, Sparkles } from 'lucide-react'
+import { generateMindMapFromJourney, hasJourneyContent } from '@/lib/mindmap/journey-generator'
+import { Compass, Sparkles, RefreshCw, Wand2 } from 'lucide-react'
+
+interface JourneyDataType {
+  clarity?: {
+    problemStatement?: string
+    targetUser?: string
+    jobsToBeDone?: string[]
+    opportunityGap?: string
+    valueHypotheses?: string[]
+    nextSteps?: string[]
+  }
+  research?: {
+    personas?: Array<{
+      name: string
+      role?: string
+      description?: string
+      painPoints?: string[]
+      goals?: string[]
+    }>
+    painMap?: Array<{
+      pain: string
+      severity?: string
+      frequency?: string
+    }>
+    insights?: string[]
+  }
+  blueprint?: {
+    features?: Array<{
+      name: string
+      description?: string
+      priority?: string
+      category?: string
+    }>
+    mvpScope?: string[]
+    constraints?: string[]
+  }
+}
 
 function MindMapPageContent() {
   const searchParams = useSearchParams()
@@ -26,57 +65,94 @@ function MindMapPageContent() {
   const versionId = searchParams.get('versionId')
   const [isAIModalOpen, setIsAIModalOpen] = useState(false)
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
-  const [journeyData, setJourneyData] = useState<string | null>(null)
+  const [hasGeneratedFromJourney, setHasGeneratedFromJourney] = useState(false)
+  const [journeyData, setJourneyData] = useState<JourneyDataType | null>(null)
+  const [projectName, setProjectName] = useState<string>('My Product')
   const canvasRef = useRef<HTMLDivElement>(null)
   
-  const { loadFromLocalStorage, reset } = useMindMapStore()
+  const { loadFromLocalStorage, reset, importGraph, nodes } = useMindMapStore()
   const getProjectVersion = useAppStore(s => s.getProjectVersion)
+  const getProject = useAppStore(s => s.getProject)
 
-  // Load journey data from store if available
+  // Generate mind map from journey data
+  const generateFromJourney = useCallback(() => {
+    if (!journeyData || !hasJourneyContent(journeyData)) return
+    
+    const { nodes: generatedNodes, edges: generatedEdges } = generateMindMapFromJourney(
+      projectName,
+      journeyData
+    )
+    
+    importGraph({ nodes: generatedNodes, edges: generatedEdges })
+    setHasGeneratedFromJourney(true)
+  }, [journeyData, projectName, importGraph])
+
+  // Load journey data and auto-generate
   useEffect(() => {
     if (projectId && versionId) {
       const version = getProjectVersion(projectId, versionId)
-      if (version?.data?.journeyData) {
-        // Auto-generate summary from journey data
-        const { clarity, research, blueprint } = version.data.journeyData
-        let summary = ''
-        
-        if (clarity) {
-          summary += `Problem: ${clarity.problemStatement}\n`
-          summary += `Target User: ${clarity.targetUser}\n`
-          if (clarity.valueHypotheses?.length) {
-            summary += `\nValue Propositions:\n${clarity.valueHypotheses.map((v: string) => `- ${v}`).join('\n')}\n`
-          }
-        }
-        
-        if (research?.personas) {
-          summary += `\nUser Personas:\n${research.personas.map((p: any) => `- ${p.name} (${p.role})`).join('\n')}\n`
-        }
-        
-        if (blueprint?.features) {
-          summary += `\nKey Features:\n${blueprint.features.slice(0, 5).map((f: any) => `- ${f.name}: ${f.description}`).join('\n')}`
-        }
-        
-        setJourneyData(summary)
+      const project = getProject(projectId)
+      
+      if (project?.name) {
+        setProjectName(project.name)
       }
+      
+      if (version?.data?.journeyData) {
+        setJourneyData(version.data.journeyData)
+      }
+      
+      // Load existing mindmap from localStorage
       loadFromLocalStorage(projectId)
     }
-  }, [projectId, versionId, loadFromLocalStorage, getProjectVersion])
+  }, [projectId, versionId, loadFromLocalStorage, getProjectVersion, getProject])
+
+  // Auto-generate on first load if we have journey data and no existing map
+  useEffect(() => {
+    if (journeyData && hasJourneyContent(journeyData) && nodes.length === 0 && !hasGeneratedFromJourney) {
+      generateFromJourney()
+    }
+  }, [journeyData, nodes.length, hasGeneratedFromJourney, generateFromJourney])
 
   const handleReset = () => {
     reset()
+    setHasGeneratedFromJourney(false)
     setIsResetModalOpen(false)
   }
 
+  const handleRegenerate = () => {
+    reset()
+    setTimeout(() => {
+      generateFromJourney()
+    }, 100)
+  }
+
+  const hasJourney = journeyData && hasJourneyContent(journeyData)
+
   return (
     <div className="space-y-6">
-      {/* Journey Tip Banner */}
+      {/* Journey Success Banner - Show when map is generated from journey */}
+      {hasJourney && hasGeneratedFromJourney && (
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-emerald-500" />
+            <p className="text-sm text-slate-700">
+              <span className="font-medium">✨ Your journey visualized!</span> This map was built from your Compass, Muse, and Blueprint data.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleRegenerate} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Regenerate
+          </Button>
+        </div>
+      )}
+
+      {/* No Journey Banner - Guide users to start journey */}
       {!projectId && (
         <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-indigo-50 border border-amber-200 rounded-xl">
           <div className="flex items-center gap-3">
             <Sparkles className="w-5 h-5 text-amber-500" />
             <p className="text-sm text-slate-700">
-              <span className="font-medium">Pro tip:</span> Complete the Shepherd Journey first, then generate a mind map from your clarity, personas, or blueprint!
+              <span className="font-medium">Pro tip:</span> Complete the Shepherd Journey first to auto-generate a mind map from your insights!
             </p>
           </div>
           <Link href="/compass">
@@ -93,13 +169,24 @@ function MindMapPageContent() {
         <div>
           <h1 className="text-3xl font-bold">Mind Map Builder</h1>
           <p className="text-muted-foreground mt-2">
-            Visualize your product insights: drag ideas, connect pains to features, or let AI build the first draft.
+            {hasJourney 
+              ? 'Your product vision, visualized from your Shepherd Journey.'
+              : 'Visualize your product insights: drag ideas, connect pains to features, or let AI build the first draft.'
+            }
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsAIModalOpen(true)}>
-            Generate AI Map
-          </Button>
+          {hasJourney ? (
+            <Button onClick={handleRegenerate} className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Regenerate from Journey
+            </Button>
+          ) : (
+            <Button onClick={() => setIsAIModalOpen(true)} className="gap-2">
+              <Wand2 className="w-4 h-4" />
+              Generate AI Map
+            </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={() => setIsResetModalOpen(true)}
@@ -127,12 +214,12 @@ function MindMapPageContent() {
         </Card>
       </ReactFlowProvider>
 
-      {/* AI Controls Modal */}
+      {/* AI Controls Modal - Only for users without journey data */}
       <AIControls 
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
-        initialText={journeyData || ''}
-        hasJourneyData={!!journeyData}
+        initialText=""
+        hasJourneyData={false}
       />
 
       {/* Reset Confirmation Modal */}

@@ -144,69 +144,15 @@ Return a JSON structure with nodes and edges arrays.`
     const message =
       error instanceof Error ? error.message : 'Unable to generate mind map'
     
-    // Fallback to mock data if AI generation fails
-    const fallbackNodes: MindMapNode[] = [
-      {
-        id: 'node-1',
-        type: 'persona',
-        label: 'Target User',
-        color: NODE_COLORS.persona,
-        position: { x: -200, y: -100 },
-        data: {
-          label: 'Target User',
-          type: 'persona',
-          color: NODE_COLORS.persona,
-        },
+    // Return error - no more generic placeholder nodes
+    // Users should complete the Shepherd Journey for best results
+    return NextResponse.json(
+      { 
+        error: message,
+        suggestion: 'For best results, complete the Shepherd Journey (Compass → Muse → Blueprint) first. Your mind map will be auto-generated from your insights.'
       },
-      {
-        id: 'node-2',
-        type: 'pain',
-        label: 'Key Problem',
-        color: NODE_COLORS.pain,
-        position: { x: -100, y: 0 },
-        data: {
-          label: 'Key Problem',
-          type: 'pain',
-          color: NODE_COLORS.pain,
-        },
-      },
-      {
-        id: 'node-3',
-        type: 'feature',
-        label: 'Core Solution',
-        color: NODE_COLORS.feature,
-        position: { x: 100, y: 0 },
-        data: {
-          label: 'Core Solution',
-          type: 'feature',
-          color: NODE_COLORS.feature,
-        },
-      }
-    ]
-
-    const fallbackEdges: MindMapEdge[] = [
-      {
-        id: 'edge-1',
-        source: 'node-1',
-        target: 'node-2',
-        animated: true,
-        type: 'smoothstep',
-      },
-      {
-        id: 'edge-2',
-        source: 'node-2',
-        target: 'node-3',
-        animated: true,
-        type: 'smoothstep',
-      }
-    ]
-
-    return NextResponse.json({
-      nodes: fallbackNodes,
-      edges: fallbackEdges,
-      error: message,
-      fallback: true
-    })
+      { status: 500 }
+    )
   }
 }
 
