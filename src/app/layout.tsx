@@ -7,6 +7,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/react'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://shepherd-insight.vercel.app'),
   title: `${APP_NAME} - Light the Way to Your MVP`,
   description: 'Got an idea brewing? Transform it into a clear vision, real personas, and an actionable plan. No more guessing—just clarity.',
   keywords: [
