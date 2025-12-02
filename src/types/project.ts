@@ -4,6 +4,8 @@ export type DecisionState =
   | 'refined'      // User refined it
   | 'replaced'     // User replaced with alternative
   | 'discarded'    // User removed it
+  | 'scopedOut'    // User marked as out of scope (future version)
+  | 'notNow'       // User parked for later consideration
 
 export type DecisionType = 
   | 'feature' 

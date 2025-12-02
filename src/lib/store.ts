@@ -32,8 +32,10 @@ interface StoreState {
   refineDecision: (projectId: string, versionId: string, decisionId: string, refinedContent: any, userRequest: string, aiProvider: string) => void;
   replaceDecision: (projectId: string, versionId: string, decisionId: string, newContent: any, aiProvider: string) => void;
   discardDecision: (projectId: string, versionId: string, decisionId: string) => void;
+  scopeOutDecision: (projectId: string, versionId: string, decisionId: string) => void;
+  notNowDecision: (projectId: string, versionId: string, decisionId: string) => void;
   getDecisions: (projectId: string, versionId: string, filters?: { type?: DecisionType; state?: DecisionState }) => Decision[];
-  getDecisionStats: (projectId: string, versionId: string) => { total: number; locked: number; pending: number; refined: number; replaced: number; discarded: number };
+  getDecisionStats: (projectId: string, versionId: string) => { total: number; locked: number; pending: number; refined: number; replaced: number; discarded: number; scopedOut: number; notNow: number };
 }
 
 function nowISO() {
@@ -268,7 +270,7 @@ export const useAppStore = create<StoreState>()(
             decisions.push({
               id: nanoid(),
               type: 'insight',
-              content: { text: insight },
+              content: { insight: insight, title: insight.substring(0, 60) + (insight.length > 60 ? '...' : '') },
               state: 'pending',
               locked: false,
               createdAt: timestamp,
@@ -497,6 +499,64 @@ export const useAppStore = create<StoreState>()(
         }));
       },
 
+      scopeOutDecision: (projectId, versionId, decisionId) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      return {
+                        ...decision,
+                        state: 'scopedOut' as DecisionState,
+                        locked: false,
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      notNowDecision: (projectId, versionId, decisionId) => {
+        set(state => ({
+          projects: state.projects.map(project => {
+            if (project.id !== projectId) return project;
+            return {
+              ...project,
+              versions: project.versions.map(version => {
+                if (version.id !== versionId) return version;
+                return {
+                  ...version,
+                  data: {
+                    ...version.data,
+                    decisions: version.data.decisions?.map(decision => {
+                      if (decision.id !== decisionId) return decision;
+                      return {
+                        ...decision,
+                        state: 'notNow' as DecisionState,
+                        locked: false,
+                        updatedAt: nowISO(),
+                      };
+                    }),
+                  },
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
       getDecisions: (projectId, versionId, filters) => {
         const version = get().getProjectVersion(projectId, versionId);
         if (!version?.data.decisions) return [];
@@ -524,6 +584,8 @@ export const useAppStore = create<StoreState>()(
           refined: decisions.filter(d => d.state === 'refined').length,
           replaced: decisions.filter(d => d.state === 'replaced').length,
           discarded: decisions.filter(d => d.state === 'discarded').length,
+          scopedOut: decisions.filter(d => d.state === 'scopedOut').length,
+          notNow: decisions.filter(d => d.state === 'notNow').length,
         };
       },
     }),

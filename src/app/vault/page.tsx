@@ -50,6 +50,8 @@ function VaultPageContent() {
   const refineDecision = useAppStore(s => s.refineDecision);
   const replaceDecision = useAppStore(s => s.replaceDecision);
   const discardDecision = useAppStore(s => s.discardDecision);
+  const scopeOutDecision = useAppStore(s => s.scopeOutDecision);
+  const notNowDecision = useAppStore(s => s.notNowDecision);
 
   // Modal state
   const [refinementModalOpen, setRefinementModalOpen] = useState(false);
@@ -94,6 +96,14 @@ function VaultPageContent() {
 
   const handleDiscardDecision = (decisionId: string) => {
     discardDecision(projectId, versionId, decisionId);
+  };
+
+  const handleScopeOutDecision = (decisionId: string) => {
+    scopeOutDecision(projectId, versionId, decisionId);
+  };
+
+  const handleNotNowDecision = (decisionId: string) => {
+    notNowDecision(projectId, versionId, decisionId);
   };
 
   // If no project/version and no blueprint, show journey start
@@ -241,7 +251,7 @@ function VaultPageContent() {
 
             <div className="space-y-4">
               {decisions
-                .filter(d => d.state !== 'discarded')
+                .filter(d => d.state !== 'discarded' && d.state !== 'scopedOut' && d.state !== 'notNow')
                 .map(decision => (
                   <DecisionCard
                     key={decision.id}
@@ -256,6 +266,8 @@ function VaultPageContent() {
                       setAlternativesModalOpen(true);
                     }}
                     onDiscard={() => handleDiscardDecision(decision.id)}
+                    onScopeOut={() => handleScopeOutDecision(decision.id)}
+                    onNotNow={() => handleNotNowDecision(decision.id)}
                   />
                 ))
               }
@@ -307,10 +319,26 @@ function VaultPageContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Not Now — Parked Scope</CardTitle>
+            <CardTitle>Not Now — Parked for Later</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {locked.notNowLocked.length ? (
+            {decisions.filter(d => d.state === 'notNow').length > 0 ? (
+              decisions.filter(d => d.state === 'notNow').map((decision, idx) => {
+                const content = decision.content;
+                const title = content.name || content.title || content.insight || content.pain || 'Parked item';
+                return (
+                  <div key={idx} className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700">{decision.type}</span>
+                    </div>
+                    <div className="font-medium text-orange-900">{title}</div>
+                    <p className="mt-1 text-xs text-orange-800">
+                      Parked for later versions so your team stays focused on the MVP.
+                    </p>
+                  </div>
+                );
+              })
+            ) : locked.notNowLocked.length ? (
               locked.notNowLocked.map((feature, idx) => (
                 <div key={idx} className="rounded-lg border border-orange-200 bg-orange-50 p-3">
                   <div className="font-medium text-orange-900">NOT NOW — {feature}</div>
@@ -321,7 +349,36 @@ function VaultPageContent() {
               ))
             ) : (
               <p className="text-sm text-gray-600">
-                No features parked. Add &quot;not now&quot; items to keep future scope visible.
+                No items parked. Use &quot;Not Now&quot; to keep future scope visible.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Out of Scope — Not This Product</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {decisions.filter(d => d.state === 'scopedOut').length > 0 ? (
+              decisions.filter(d => d.state === 'scopedOut').map((decision, idx) => {
+                const content = decision.content;
+                const title = content.name || content.title || content.insight || content.pain || 'Scoped out item';
+                return (
+                  <div key={idx} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">{decision.type}</span>
+                    </div>
+                    <div className="font-medium text-gray-900">{title}</div>
+                    <p className="mt-1 text-xs text-gray-600">
+                      Explicitly out of scope for this product. Keep your focus narrow.
+                    </p>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-gray-600">
+                Nothing scoped out. Use &quot;Out of Scope&quot; to clarify what this product is NOT.
               </p>
             )}
           </CardContent>

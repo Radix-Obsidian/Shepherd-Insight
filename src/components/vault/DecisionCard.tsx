@@ -5,7 +5,7 @@ import { Decision, DecisionType } from '@/types/project'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Lock, RefreshCw, Replace, Trash2, Sparkles } from 'lucide-react'
+import { Lock, RefreshCw, Replace, Trash2, Sparkles, XCircle, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface DecisionCardProps {
@@ -14,6 +14,8 @@ interface DecisionCardProps {
   onRefine: () => void
   onReplace: () => void
   onDiscard: () => void
+  onScopeOut: () => void
+  onNotNow: () => void
 }
 
 const DECISION_TYPE_COLORS: Record<DecisionType, string> = {
@@ -40,6 +42,8 @@ const STATE_BADGES: Record<Decision['state'], { label: string; className: string
   refined: { label: 'Refined', className: 'bg-blue-100 text-blue-700' },
   replaced: { label: 'Replaced', className: 'bg-purple-100 text-purple-700' },
   discarded: { label: 'Discarded', className: 'bg-red-100 text-red-700' },
+  scopedOut: { label: 'Out of Scope', className: 'bg-gray-100 text-gray-700' },
+  notNow: { label: 'Not Now', className: 'bg-orange-100 text-orange-700' },
 }
 
 function getDecisionPreview(decision: Decision): { title: string; description: string } {
@@ -87,6 +91,8 @@ export function DecisionCard({
   onRefine,
   onReplace,
   onDiscard,
+  onScopeOut,
+  onNotNow,
 }: DecisionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { title, description } = getDecisionPreview(decision)
@@ -156,6 +162,26 @@ export function DecisionCard({
             >
               <RefreshCw className="w-4 h-4" />
               Replace It
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onNotNow}
+              className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+            >
+              <Clock className="w-4 h-4" />
+              Not Now
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onScopeOut}
+              className="gap-2 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+            >
+              <XCircle className="w-4 h-4" />
+              Out of Scope
             </Button>
 
             <Button
