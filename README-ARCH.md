@@ -15,6 +15,11 @@ We follow the **Golden Sheep AI Methodology**:
 3. **Zero-Placeholder Policy** — Real data, real AI responses, no mocks in production
 4. **Evidence-Driven Development** — Every decision backed by user research
 
+### Primary Audience
+
+- **Women in tech founders** who need a research-led partner to translate their vision into a roadmap.
+- **Non-technical operators** who want confident decision making without hiring a full UX team.
+
 ## Tech Stack
 
 ### Frontend
@@ -57,7 +62,7 @@ src/
 │   ├── compass/                # 🧭 Step 1: Idea Clarity
 │   ├── muse/                   # 🎭 Step 2: User Research
 │   ├── blueprint/              # 📐 Step 3: MVP Planning
-│   ├── mindmap/                # 🗺️ Visual Strategy
+│   ├── mindmap/                # 🗺️ Visual Strategy (auto-generated from journey data)
 │   ├── vault/                  # 🔒 Decision Vault
 │   ├── dashboard/              # Project Dashboard
 │   ├── exports/                # Export Functionality
@@ -259,6 +264,12 @@ Future features are documented in `docs/future-features/`:
 - **Project Cache**: Zustand caches Supabase data for performance
 - **Form State**: Local React state with real-time Supabase persistence
 - **Error Handling**: Graceful degradation and user feedback
+
+### Mind Map Page
+- **Purpose**: Visualize the Shepherd Journey outcomes without extra prompting.
+- **Current State**: Automatically builds nodes/edges from Compass (clarity), Muse (personas/pains), and Blueprint (features) data when a project + version is provided in the URL. Falls back to the legacy AI modal only when journey data is absent.
+- **Escapes**: Regenerate button enforces customer data as the source of truth, Reset returns to blank canvas.
+- **Next**: Persist manual edits to Supabase for collaboration.
 
 ### Vault Page
 - **Purpose**: Display "locked decisions" - the final truth for development

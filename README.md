@@ -25,6 +25,11 @@
 
 We believe every great product starts with understanding your user deeply. ShepLight combines AI-powered research, UX methodology, and actionable frameworks to guide founders through the critical early stages of product development.
 
+### Who We Serve
+
+- **Women in tech** who are tired of being overlooked by generic ideation tools and want research-led clarity.
+- **Non-technical founders** who need a coach that translates vision into an actionable product brief.
+
 ### The Problem We Solve
 
 > "I have a great idea, but I don't know where to start."
@@ -45,13 +50,21 @@ Generate realistic user personas, pain point maps, and emotional journey insight
 Get an actionable MVP scope, prioritized feature list, and 4-week roadmap. Every recommendation traces back to user pain points.
 
 ### 🗺️ Mind Map — Visualize Your Strategy
-Interactive mind map builder to explore and expand your product thinking. AI-assisted node generation.
+Auto-generates a mind map directly from your Compass, Muse, and Blueprint insights the moment you open it. When journey data is missing, the legacy AI-assisted builder is still available on demand.
 
 ### 🔒 Decision Vault — Lock Your Choices
 Save and version your product decisions. Never lose track of what you committed to build.
 
 ### 📤 Exports — Share Your Vision
 Export professional Markdown briefs to share with co-founders, investors, or developers.
+
+---
+
+## 🆕 Latest Updates (December 2025)
+
+- **Journey-first mind map** — Vault and Export links now pass full project context so the mind map instantly renders your real journey data.
+- **Insight polish** — Positioning copy inside the Insight Report uses the correct readable colors.
+- **Branded sharing** — Custom Open Graph and Twitter meta images ensure ShepLight links look professional on social platforms.
 
 ---
 
