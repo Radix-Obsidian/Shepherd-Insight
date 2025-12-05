@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./docs/assets/sheplight-logo.svg" alt="ShepLight Logo" width="120" />
+  <img src="C:\Users\autre\Downloads\ShepLight Logo.png" alt="ShepLight Logo" width="120" />
   
   # ShepLight
   
